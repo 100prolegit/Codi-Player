@@ -2,88 +2,118 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Pitch‑Shifter Player mit SoundTouch Worklet</title>
+<title>MP3 Player – Pitch Slider + Effekte</title>
 <style>
-  body { background:#111; color:white; font-family:Arial; padding:20px; }
-  label, button { margin-top:10px; display:block; }
-  #pitchControls { display:flex; gap:10px; margin-top:5px; }
-  #pitchValue { width:40px; text-align:center; }
+body { background:#111; color:white; font-family:Arial; padding:20px; }
+label, button { margin-top:10px; display:block; }
+input[type="range"] { width:300px; }
+#pitchValue { width:50px; display:inline-block; text-align:center; margin-left:10px; }
 </style>
 </head>
 <body>
 
-<h2>MP3 Player mit Echtzeit Pitch‑Shifter</h2>
+<h2>MP3 Player – Pitch Slider + Flanger & Reverb</h2>
 
-<input type="file" id="fileInput" accept="audio/*">
+<input type="file" id="fileInput" accept="audio/mp3">
 
 <button id="playBtn">Play</button>
 <button id="stopBtn">Stop</button>
 
-<label>Pitch (Semitones)</label>
-<div id="pitchControls">
-  <button id="pitchDown">&lt;</button>
-  <div id="pitchValue">0</div>
-  <button id="pitchUp">&gt;</button>
-</div>
+<label>
+  Pitch Slider (Speed + Pitch):
+  <input type="range" id="pitchControl" min="0.8" max="1.2" step="0.01" value="1">
+  <span id="pitchValue">1.00</span>
+</label>
+
+<label>
+  Flanger (0–100%):
+  <input type="range" id="flangerControl" min="0" max="1" step="0.01" value="0">
+</label>
+
+<label>
+  Reverb (0–100%):
+  <input type="range" id="reverbControl" min="0" max="1" step="0.01" value="0">
+</label>
 
 <script>
-(async ()=>{
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let audioBuffer = null;
+let bufferSource = null;
 
-  // Lade SoundTouch Worklet
-  await ctx.audioWorklet.addModule('js/soundtouch-worklet.js');
+// Effekte
+let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
 
-  let originalBuffer = null;
-  let playerSource = null;
+let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
+let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.7;
+flangerDelay.connect(flangerFeedback); flangerFeedback.connect(flangerDelay);
+let flangerWet = audioContext.createGain(); flangerWet.gain.value = 0;
+let lfo = audioContext.createOscillator(); let lfoGain = audioContext.createGain();
+lfo.type = "sine"; lfo.frequency.value = 0.3; lfoGain.gain.value = 0.001;
+lfo.connect(lfoGain); lfoGain.connect(flangerDelay.delayTime); lfo.start();
 
-  let semitones = 0;
-  const pitchDisplay = document.getElementById('pitchValue');
-
-  // SoundTouch‑Node erstellen
-  let soundTouchNode = new AudioWorkletNode(ctx, 'soundtouch-processor');
-
-  document.getElementById('fileInput').addEventListener('change', async e => {
-    let file = e.target.files[0];
-    if (!file) return;
-    let ab = await file.arrayBuffer();
-    originalBuffer = await ctx.decodeAudioData(ab);
-  });
-
-  function connectAndPlay() {
-    if (!originalBuffer) return;
-
-    if (playerSource) {
-      playerSource.disconnect();
+let convolver = audioContext.createConvolver();
+let reverbWet = audioContext.createGain(); reverbWet.gain.value = 0;
+function createImpulseResponse(duration=2.5, decay=3){
+  let sampleRate = audioContext.sampleRate;
+  let length = sampleRate*duration;
+  let impulse = audioContext.createBuffer(2,length,sampleRate);
+  for(let c=0;c<2;c++){
+    let channel = impulse.getChannelData(c);
+    for(let i=0;i<length;i++){
+      channel[i] = (Math.random()*2-1) * Math.pow(1-i/length, decay);
     }
-    playerSource = ctx.createBufferSource();
-    playerSource.buffer = originalBuffer;
-
-    // Pitch steuern
-    soundTouchNode.parameters.get('pitchSemitones').value = semitones;
-
-    // Chain: source → SoundTouchNode → destination
-    playerSource.connect(soundTouchNode);
-    soundTouchNode.connect(ctx.destination);
-
-    playerSource.start();
   }
+  return impulse;
+}
+convolver.buffer = createImpulseResponse();
 
-  document.getElementById('playBtn').onclick = connectAndPlay;
-  document.getElementById('stopBtn').onclick = () => {
-    if (playerSource) playerSource.stop();
-  };
+// File Input
+document.getElementById("fileInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const arrayBuffer = await file.arrayBuffer();
+  audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+});
 
-  document.getElementById('pitchUp').onclick = () => {
-    if (semitones < 12) semitones++;
-    pitchDisplay.textContent = semitones;
-    soundTouchNode.parameters.get('pitchSemitones').value = semitones;
-  };
-  document.getElementById('pitchDown').onclick = () => {
-    if (semitones > -12) semitones--;
-    pitchDisplay.textContent = semitones;
-    soundTouchNode.parameters.get('pitchSemitones').value = semitones;
-  };
-})();
+// Play Audio
+function playAudio(){
+  if(!audioBuffer) return;
+  if(bufferSource) bufferSource.disconnect();
+
+  bufferSource = audioContext.createBufferSource();
+  bufferSource.buffer = audioBuffer;
+  bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
+
+  // Audio-Chain: Buffer → Effekte → Output
+  bufferSource.connect(dryGain); dryGain.connect(audioContext.destination);
+  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
+  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
+
+  bufferSource.start();
+}
+
+document.getElementById("playBtn").addEventListener("click", playAudio);
+document.getElementById("stopBtn").addEventListener("click", () => {
+  if(bufferSource) bufferSource.stop();
+});
+
+// Pitch Slider
+const pitchSlider = document.getElementById("pitchControl");
+const pitchValueSpan = document.getElementById("pitchValue");
+pitchSlider.addEventListener("input", e => {
+  const val = parseFloat(e.target.value);
+  pitchValueSpan.textContent = val.toFixed(2);
+  if(bufferSource) bufferSource.playbackRate.value = val;
+});
+
+// Effekte Mix
+function updateMix(){
+  flangerWet.gain.value = parseFloat(document.getElementById("flangerControl").value);
+  reverbWet.gain.value = parseFloat(document.getElementById("reverbControl").value);
+  dryGain.gain.value = 1-Math.max(flangerWet.gain.value,reverbWet.gain.value);
+}
+document.getElementById("flangerControl").addEventListener("input",updateMix);
+document.getElementById("reverbControl").addEventListener("input",updateMix);
 </script>
 
 </body>
