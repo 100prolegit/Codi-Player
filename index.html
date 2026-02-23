@@ -2,20 +2,23 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>MP3 Player – Extreme Rubberband Version</title>
+<title>MP3 Player – Waveform Version</title>
 <style>
 body { font-family: Arial; background:#111; color:white; padding:20px; }
 label { display:block; margin-top:15px; }
 input[type="range"] { width:400px; }
 button { margin:5px; padding:8px 16px; }
 #pitchValue { font-size:18px; margin-left:10px; }
+canvas { width:100%; height:100px; background:#222; margin-bottom:20px; }
 </style>
 </head>
 <body>
 
-<h2>MP3 Player – Extreme Pitch (10% – 400%)</h2>
+<h2>MP3 Player – Waveform + Rubberband</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
+
+<canvas id="waveform"></canvas>
 
 <div>
   <button id="playPauseBtn">Play</button>
@@ -40,6 +43,8 @@ button { margin:5px; padding:8px 16px; }
 <script src="js/rubberband-processor.js"></script>
 
 <script>
+const canvas = document.getElementById('waveform');
+const ctx = canvas.getContext('2d');
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioBuffer = null;
 let bufferSource = null;
@@ -95,13 +100,54 @@ document.getElementById("fileInput").addEventListener("change", function(e){
     audioContext.decodeAudioData(ev.target.result).then(buffer=>{
       audioBuffer = buffer;
       pauseOffset = 0;
+      drawWaveform(buffer);
     });
   };
   reader.readAsArrayBuffer(e.target.files[0]);
 });
 
+// Draw waveform
+function drawWaveform(buffer){
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0,0,width,height);
+  const data = buffer.getChannelData(0); // nur links
+  const step = Math.ceil(data.length / width);
+  const amp = height / 2;
+  ctx.fillStyle = '#555';
+  for(let i=0; i<width; i++){
+    let min = 1.0, max = -1.0;
+    for(let j=0;j<step;j++){
+      let datum = data[(i*step)+j];
+      if(datum < min) min = datum;
+      if(datum > max) max = datum;
+    }
+    ctx.fillRect(i, (1+min)*amp, 1, Math.max(1,(max-min)*amp));
+  }
+}
+
+// Draw play position
+function drawProgress(){
+  if(!audioBuffer || !isPlaying) return;
+  const width = canvas.width;
+  const height = canvas.height;
+  const currentTime = audioContext.currentTime - startTime + pauseOffset;
+  const progress = Math.min(currentTime/audioBuffer.duration,1);
+  ctx.fillStyle = 'rgba(255,0,0,0.5)';
+  ctx.fillRect(progress*width,0,2,height);
+  requestAnimationFrame(drawProgress);
+}
+
+// PLAY/PAUSE
+const playPauseBtn = document.getElementById("playPauseBtn");
+const pitchControl = document.getElementById("pitchControl");
+const pitchValue = document.getElementById("pitchValue");
+const flangerControl = document.getElementById("flangerControl");
+const reverbControl = document.getElementById("reverbControl");
+
 function startPlayback(){
   if(!audioBuffer) return;
+  if(bufferSource){ bufferSource.stop(); bufferSource.disconnect(); bufferSource=null; }
 
   if(typeof RubberbandProcessor !== 'undefined'){
     rubberbandProcessor = new RubberbandProcessor(audioContext, audioBuffer);
@@ -125,7 +171,9 @@ function startPlayback(){
   reverbWet.connect(audioContext.destination);
 
   startTime = audioContext.currentTime;
-  bufferSource.start(0, pauseOffset);
+  bufferSource.start(0,pauseOffset);
+  isPlaying = true;
+  drawProgress();
 }
 
 function pausePlayback(){
@@ -133,37 +181,28 @@ function pausePlayback(){
     pauseOffset += audioContext.currentTime - startTime;
     bufferSource.stop();
     bufferSource.disconnect();
-    bufferSource = null;
+    bufferSource=null;
+    isPlaying=false;
   }
 }
 
-const playPauseBtn = document.getElementById("playPauseBtn");
-playPauseBtn.addEventListener("click", function(){
+playPauseBtn.addEventListener("click",function(){
   if(!isPlaying){
     startPlayback();
-    playPauseBtn.textContent = "Pause";
-    isPlaying = true;
+    playPauseBtn.textContent="Pause";
   } else {
     pausePlayback();
-    playPauseBtn.textContent = "Play";
-    isPlaying = false;
+    playPauseBtn.textContent="Play";
   }
 });
 
 // Pitch live ändern
-const pitchControl = document.getElementById("pitchControl");
-const pitchValue = document.getElementById("pitchValue");
-
-pitchControl.addEventListener("input", function(e){
-  let val = parseFloat(e.target.value);
+pitchControl.addEventListener("input", function(){
+  let val = parseFloat(pitchControl.value);
   pitchValue.textContent = val.toFixed(2);
-
   if(isPlaying){
-    if(rubberbandProcessor){
-      rubberbandProcessor.setPitch(val);
-    } else if(bufferSource){
-      bufferSource.playbackRate.value = val;
-    }
+    if(rubberbandProcessor) rubberbandProcessor.setPitch(val);
+    else if(bufferSource) bufferSource.playbackRate.value = val;
   }
 });
 
