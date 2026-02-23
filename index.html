@@ -2,19 +2,18 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>MP3 Player – Pitch + Effekte + Waveform</title>
+<title>MP3 Player – Stable Version</title>
 <style>
 body { font-family: Arial; background:#111; color:white; padding:20px; }
 label { display:block; margin-top:15px; }
 input[type="range"] { width:300px; }
 button { margin:5px; padding:8px 16px; }
-#pitchValue { font-size:18px; width:50px; text-align:center; margin-left:10px; }
-canvas { width:100%; height:100px; background:#222; margin-top:10px; }
+#pitchValue { font-size:18px; margin-left:10px; }
 </style>
 </head>
 <body>
 
-<h2>MP3 Player – Pitch + Effekte + Waveform</h2>
+<h2>MP3 Player – Pitch + Flanger + Reverb</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
@@ -23,157 +22,148 @@ canvas { width:100%; height:100px; background:#222; margin-top:10px; }
   <button id="stopBtn">Stop</button>
 
   <label>
-    Pitch Slider (Tempo + Pitch):
+    Pitch (Tempo gekoppelt):
     <input type="range" id="pitchControl" min="0.8" max="1.2" step="0.01" value="1">
     <span id="pitchValue">1.00</span>
   </label>
 
   <label>
-    Flanger (0–100%):
+    Flanger:
     <input type="range" id="flangerControl" min="0" max="1" step="0.01" value="0">
   </label>
 
   <label>
-    Reverb (0–100%):
+    Reverb:
     <input type="range" id="reverbControl" min="0" max="1" step="0.01" value="0">
   </label>
 </div>
-
-<canvas id="waveform"></canvas>
 
 <script>
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioBuffer = null;
 let bufferSource = null;
-let startTime = 0;
-let isPlaying = false;
-let animationFrameId;
 
-// Effekte
-let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
+// === EFFECT NODES ===
+let dryGain = audioContext.createGain();
+dryGain.gain.value = 1;
 
-let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
-let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.7;
-flangerDelay.connect(flangerFeedback); flangerFeedback.connect(flangerDelay);
-let flangerWet = audioContext.createGain(); flangerWet.gain.value = 0;
+let flangerDelay = audioContext.createDelay();
+flangerDelay.delayTime.value = 0.003;
 
-let lfo = audioContext.createOscillator(); let lfoGain = audioContext.createGain();
-lfo.type = "sine"; lfo.frequency.value = 0.3; lfoGain.gain.value = 0.001;
-lfo.connect(lfoGain); lfoGain.connect(flangerDelay.delayTime); lfo.start();
+let flangerFeedback = audioContext.createGain();
+flangerFeedback.gain.value = 0.7;
+
+let flangerWet = audioContext.createGain();
+flangerWet.gain.value = 0;
+
+flangerDelay.connect(flangerFeedback);
+flangerFeedback.connect(flangerDelay);
+
+let lfo = audioContext.createOscillator();
+let lfoGain = audioContext.createGain();
+lfo.frequency.value = 0.3;
+lfoGain.gain.value = 0.001;
+lfo.connect(lfoGain);
+lfoGain.connect(flangerDelay.delayTime);
+lfo.start();
 
 let convolver = audioContext.createConvolver();
-let reverbWet = audioContext.createGain(); reverbWet.gain.value = 0;
+let reverbWet = audioContext.createGain();
+reverbWet.gain.value = 0;
 
-function createImpulseResponse(duration=2.5, decay=3){
-  let sampleRate = audioContext.sampleRate;
-  let length = sampleRate*duration;
-  let impulse = audioContext.createBuffer(2,length,sampleRate);
+function createImpulseResponse(duration=2, decay=2.5){
+  let rate = audioContext.sampleRate;
+  let length = rate * duration;
+  let impulse = audioContext.createBuffer(2, length, rate);
+
   for(let c=0;c<2;c++){
     let channel = impulse.getChannelData(c);
     for(let i=0;i<length;i++){
-      channel[i] = (Math.random()*2-1)*Math.pow(1-i/length,decay);
+      channel[i] = (Math.random()*2-1) * Math.pow(1-i/length, decay);
     }
   }
   return impulse;
 }
+
 convolver.buffer = createImpulseResponse();
 
-// Waveform Canvas
-const canvas = document.getElementById("waveform");
-const canvasCtx = canvas.getContext("2d");
-
-// File Input
+// === FILE LOAD ===
 document.getElementById("fileInput").addEventListener("change", function(e){
   let reader = new FileReader();
   reader.onload = function(ev){
-    audioContext.decodeAudioData(ev.target.result, function(buffer){
+    audioContext.decodeAudioData(ev.target.result).then(buffer=>{
       audioBuffer = buffer;
-      drawWaveform(); // statische Waveform
     });
   };
   reader.readAsArrayBuffer(e.target.files[0]);
 });
 
-// Play
+// === PLAY ===
 function playAudio(){
   if(!audioBuffer) return;
-  if(bufferSource) bufferSource.disconnect();
+
+  if(bufferSource){
+    bufferSource.stop();
+    bufferSource.disconnect();
+  }
 
   bufferSource = audioContext.createBufferSource();
   bufferSource.buffer = audioBuffer;
-  bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
 
-  bufferSource.connect(dryGain); dryGain.connect(audioContext.destination);
-  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
-  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
+  bufferSource.playbackRate.value =
+    parseFloat(document.getElementById("pitchControl").value);
 
-  bufferSource.start();
-  startTime = audioContext.currentTime;
-  isPlaying = true;
-  drawProgress();
+  // routing
+  bufferSource.connect(dryGain);
+  dryGain.connect(audioContext.destination);
+
+  bufferSource.connect(flangerDelay);
+  flangerDelay.connect(flangerWet);
+  flangerWet.connect(audioContext.destination);
+
+  bufferSource.connect(convolver);
+  convolver.connect(reverbWet);
+  reverbWet.connect(audioContext.destination);
+
+  bufferSource.start(0);
 }
 
-// Stop
+document.getElementById("playBtn").addEventListener("click", playAudio);
+
+// === STOP ===
 document.getElementById("stopBtn").addEventListener("click", function(){
-  if(bufferSource) bufferSource.stop();
-  bufferSource = null;
-  isPlaying = false;
+  if(bufferSource){
+    bufferSource.stop();
+    bufferSource.disconnect();
+    bufferSource = null;
+  }
 });
 
-// Pitch Slider
+// === PITCH ===
 const pitchSlider = document.getElementById("pitchControl");
-const pitchValueSpan = document.getElementById("pitchValue");
+const pitchValue = document.getElementById("pitchValue");
+
 pitchSlider.addEventListener("input", function(e){
-  pitchValueSpan.textContent = parseFloat(e.target.value).toFixed(2);
-  if(bufferSource) bufferSource.playbackRate.value = parseFloat(e.target.value);
+  let val = parseFloat(e.target.value);
+  pitchValue.textContent = val.toFixed(2);
+  if(bufferSource){
+    bufferSource.playbackRate.value = val;
+  }
 });
 
-// Effekte Mix
+// === MIX UPDATE ===
 function updateMix(){
-  flangerWet.gain.value = parseFloat(document.getElementById("flangerControl").value);
-  reverbWet.gain.value = parseFloat(document.getElementById("reverbControl").value);
-  dryGain.gain.value = 1-Math.max(flangerWet.gain.value,reverbWet.gain.value);
+  let flanger = parseFloat(document.getElementById("flangerControl").value);
+  let reverb = parseFloat(document.getElementById("reverbControl").value);
+
+  flangerWet.gain.value = flanger;
+  reverbWet.gain.value = reverb;
+  dryGain.gain.value = 1 - Math.max(flanger, reverb);
 }
+
 document.getElementById("flangerControl").addEventListener("input", updateMix);
 document.getElementById("reverbControl").addEventListener("input", updateMix);
 
-// Waveform Zeichnen
-function drawWaveform(){
-  if(!audioBuffer) return;
-  const width = canvas.width;
-  const height = canvas.height;
-  const data = audioBuffer.getChannelData(0);
-  canvasCtx.fillStyle = "#222";
-  canvasCtx.fillRect(0,0,width,height);
-  canvasCtx.strokeStyle = "#555";
-  canvasCtx.beginPath();
-  const step = Math.ceil(data.length / width);
-  for(let i=0;i<width;i++){
-    const min = Math.min(...data.slice(i*step,(i+1)*step));
-    const max = Math.max(...data.slice(i*step,(i+1)*step));
-    canvasCtx.moveTo(i, (1+min)*height/2);
-    canvasCtx.lineTo(i, (1+max)*height/2);
-  }
-  canvasCtx.stroke();
-}
-
-// Fortschrittsanzeige über Waveform
-function drawProgress(){
-  if(!isPlaying || !audioBuffer) return;
-  const width = canvas.width;
-  const height = canvas.height;
-  const elapsed = (audioContext.currentTime - startTime) * bufferSource.playbackRate.value;
-  const progressX = Math.min(width, width * elapsed / audioBuffer.duration);
-
-  // Waveform neu zeichnen
-  drawWaveform();
-
-  // Fortschritt anzeigen
-  canvasCtx.fillStyle = "rgba(29,185,84,0.5)";
-  canvasCtx.fillRect(0,0,progressX,height);
-
-  requestAnimationFrame(drawProgress);
-}
 </script>
 
 </body>
