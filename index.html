@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>MP3 Player – Mini DJ mit Resume</title>
+<title>MP3 Player – richtiges Pause/Resume</title>
 <style>
 body { background:#111; color:white; font-family:Arial; padding:20px; }
 button, label { margin-top:10px; display:block; }
@@ -15,7 +15,7 @@ canvas { width:100%; height:100px; background:#222; margin-top:10px; }
 </head>
 <body>
 
-<h2>MP3 Player – Mini DJ mit Resume</h2>
+<h2>MP3 Player – richtiges Pause/Resume</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
@@ -85,29 +85,30 @@ document.getElementById("fileInput").addEventListener("change", async e=>{
   drawWaveform();
 });
 
-// Funktion, um einen neuen BufferSource ab einer Position zu starten
+// Funktion, die einen neuen BufferSource erstellt und verbindet
 function createSource(offset = 0){
-  bufferSource = ctx.createBufferSource();
-  bufferSource.buffer = audioBuffer;
-  bufferSource.playbackRate.value = parseFloat(pitchSlider.value);
+  const source = ctx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.playbackRate.value = parseFloat(pitchSlider.value);
 
-  bufferSource.connect(dryGain); dryGain.connect(ctx.destination);
-  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(ctx.destination);
-  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(ctx.destination);
+  source.connect(dryGain); dryGain.connect(ctx.destination);
+  source.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(ctx.destination);
+  source.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(ctx.destination);
 
-  bufferSource.onended = ()=>{
+  source.onended = () => {
     isPlaying = false;
     pauseOffset = 0;
     cancelAnimationFrame(animationFrameId);
     updateProgressBar();
   };
-  return bufferSource;
+
+  return source;
 }
 
 // Play / Resume
 function playAudio(){
   if(!audioBuffer || isPlaying) return;
-  createSource(pauseOffset);
+  bufferSource = createSource(pauseOffset);
   startTime = ctx.currentTime - pauseOffset;
   bufferSource.start(0, pauseOffset);
   isPlaying = true;
@@ -184,7 +185,6 @@ function drawWaveform(){
 document.getElementById("playBtn").addEventListener("click", playAudio);
 document.getElementById("pauseBtn").addEventListener("click", pauseAudio);
 document.getElementById("resetBtn").addEventListener("click", resetAudio);
-
 </script>
 </body>
 </html>
