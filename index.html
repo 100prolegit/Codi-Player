@@ -23,11 +23,6 @@ button { margin:5px; padding:8px 16px; }
   <button id="stopBtn">Stop</button>
 
   <label>
-    Pitch Slider (Speed + Pitch):
-    <input type="range" id="pitchControl" min="0.8" max="1.2" step="0.01" value="1">
-  </label>
-
-  <label>
     Flanger (0–100%):
     <input type="range" id="flangerControl" min="0" max="1" step="0.01" value="0">
   </label>
@@ -45,19 +40,22 @@ button { margin:5px; padding:8px 16px; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.0/dist/soundtouch.min.js"></script>
 <script>
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioBuffer = null;
-let bufferSource = null;
-let pitchShifterNode = null;
+let sourceNode = null;
+let scriptNode = null;
+let pitch = 0; // Semitones
 
-// Effekte
+// --- Effekte ---
 let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
 
 let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
 let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.7;
 flangerDelay.connect(flangerFeedback); flangerFeedback.connect(flangerDelay);
 let flangerWet = audioContext.createGain(); flangerWet.gain.value = 0;
+
 let lfo = audioContext.createOscillator(); let lfoGain = audioContext.createGain();
 lfo.type = "sine"; lfo.frequency.value = 0.3; lfoGain.gain.value = 0.001;
 lfo.connect(lfoGain); lfoGain.connect(flangerDelay.delayTime); lfo.start();
@@ -75,62 +73,72 @@ function createImpulseResponse(duration=2.5, decay=3){
 }
 convolver.buffer = createImpulseResponse();
 
-// Pitch-Shifter Semitones
-let semitones = 0;
-const pitchValueDiv = document.getElementById("pitchValue");
-
-// Worklet laden
-async function initPitchShifter() {
-  await audioContext.audioWorklet.addModule(
-    "https://rawcdn.githack.com/100prolegit/Codi-Player/main/pitch-shifter-processor.js"
-  );
-  pitchShifterNode = new AudioWorkletNode(audioContext, "pitch-shifter-processor");
-  pitchShifterNode.parameters.get("semitones").value = semitones;
-}
-initPitchShifter();
-
-// File Input
-document.getElementById("fileInput").addEventListener("change", function(e){
-  let reader = new FileReader();
-  reader.onload = function(ev){
-    audioContext.decodeAudioData(ev.target.result, function(buffer){
-      audioBuffer = buffer;
-    });
-  };
-  reader.readAsArrayBuffer(e.target.files[0]);
+// --- File Input ---
+document.getElementById("fileInput").addEventListener("change", async function(e){
+  let file = e.target.files[0];
+  if(!file) return;
+  let arrayBuffer = await file.arrayBuffer();
+  audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 });
 
-// Play
+// --- Play Audio mit Pitch-Shifter ---
 function playAudio(){
-  if(!audioBuffer || !pitchShifterNode) return;
-  if(bufferSource) bufferSource.disconnect();
+  if(!audioBuffer) return;
 
-  bufferSource = audioContext.createBufferSource();
-  bufferSource.buffer = audioBuffer;
+  // Vorherige stoppen
+  if(sourceNode) sourceNode.disconnect();
+  if(scriptNode) scriptNode.disconnect();
 
-  bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
+  // Source Node
+  sourceNode = audioContext.createBufferSource();
+  sourceNode.buffer = audioBuffer;
 
-  // Audio-Chain: Buffer → PitchShifter → Effekte → Output
-  bufferSource.connect(pitchShifterNode);
-  pitchShifterNode.connect(dryGain); dryGain.connect(audioContext.destination);
-  pitchShifterNode.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
-  pitchShifterNode.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
+  // SoundTouchJS Setup
+  let soundTouch = new soundtouch.SoundTouch(audioBuffer.sampleRate);
+  soundTouch.pitch = Math.pow(2, pitch/12); // Semitones → Pitch Ratio
 
-  bufferSource.start();
+  let bufferSource = new soundtouch.BufferSource(audioBuffer);
+  let filter = new soundtouch.SimpleFilter(bufferSource, soundTouch);
+
+  scriptNode = audioContext.createScriptProcessor(4096, 2, 2);
+  scriptNode.onaudioprocess = function(e){
+    let l = e.outputBuffer.getChannelData(0);
+    let r = e.outputBuffer.getChannelData(1);
+    let framesExtracted = filter.extract([l, r], 4096);
+    if(framesExtracted === 0){
+      scriptNode.disconnect();
+    }
+  };
+
+  // Audio-Chain: Dry + Effekte
+  scriptNode.connect(dryGain); dryGain.connect(audioContext.destination);
+  scriptNode.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
+  scriptNode.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
+
+  sourceNode.start();
 }
 
-// Stop
+// --- Stop ---
+document.getElementById("stopBtn").addEventListener("click", ()=>{
+  if(sourceNode) sourceNode.stop();
+  if(scriptNode) scriptNode.disconnect();
+});
+
+// --- Pitch Buttons ---
+const pitchValueDiv = document.getElementById("pitchValue");
+document.getElementById("pitchUp").addEventListener("click", ()=>{
+  if(pitch < 12) pitch++;
+  pitchValueDiv.textContent = pitch;
+});
+document.getElementById("pitchDown").addEventListener("click", ()=>{
+  if(pitch > -12) pitch--;
+  pitchValueDiv.textContent = pitch;
+});
+
+// --- Play Button ---
 document.getElementById("playBtn").addEventListener("click", playAudio);
-document.getElementById("stopBtn").addEventListener("click", function(){
-  if(bufferSource) bufferSource.stop();
-});
 
-// Pitch Slider
-document.getElementById("pitchControl").addEventListener("input", function(e){
-  if(bufferSource) bufferSource.playbackRate.value = parseFloat(e.target.value);
-});
-
-// Effekte
+// --- Effekte Mix ---
 function updateMix(){
   flangerWet.gain.value = parseFloat(document.getElementById("flangerControl").value);
   reverbWet.gain.value = parseFloat(document.getElementById("reverbControl").value);
@@ -138,18 +146,6 @@ function updateMix(){
 }
 document.getElementById("flangerControl").addEventListener("input",updateMix);
 document.getElementById("reverbControl").addEventListener("input",updateMix);
-
-// Pitch-Shifter Buttons
-document.getElementById("pitchUp").addEventListener("click", function(){
-  if(semitones < 12) semitones++;
-  pitchValueDiv.textContent = semitones;
-  if(pitchShifterNode) pitchShifterNode.parameters.get("semitones").value = semitones;
-});
-document.getElementById("pitchDown").addEventListener("click", function(){
-  if(semitones > -12) semitones--;
-  pitchValueDiv.textContent = semitones;
-  if(pitchShifterNode) pitchShifterNode.parameters.get("semitones").value = semitones;
-});
 </script>
 
 </body>
