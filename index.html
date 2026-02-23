@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>MP3 Player mit Semitone Pitch Shifter</title>
+<title>MP3 Player – Pitch + Effekte</title>
 <style>
 body { font-family: Arial; background:#111; color:white; padding:20px; }
 label { display:block; margin-top:15px; }
@@ -14,7 +14,7 @@ button { margin:5px; padding:8px 16px; }
 </head>
 <body>
 
-<h2>MP3 Player – Pitch Shift ±12 (nur Tonhöhe)</h2>
+<h2>MP3 Player – Pitch Shift ±12 Semitones</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
@@ -23,7 +23,7 @@ button { margin:5px; padding:8px 16px; }
   <button id="stopBtn">Stop</button>
 
   <label>
-    Pitch Slider (Speed & Pitch):
+    Pitch Slider (Speed + Pitch):
     <input type="range" id="pitchControl" min="0.8" max="1.2" step="0.01" value="1">
   </label>
 
@@ -45,21 +45,16 @@ button { margin:5px; padding:8px 16px; }
   </div>
 </div>
 
-<!-- SoundTouch.js -->
-<script src="https://cdn.jsdelivr.net/npm/soundtouchjs@1.1.0/dist/soundtouch.min.js"></script>
-
 <script>
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-let buffer = null;
-let sourceNode = null;
-let pitchSlider = 1; // Speed+Pitch
-let semitones = 0;   // Tonhöhe nur
-let pitchValueDiv = document.getElementById("pitchValue");
+let audioBuffer = null;
+let bufferSource = null;
 
-// Gains / Effekte
+// Effekt-Gains
 let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
+
 let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
-let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.8;
+let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.7;
 flangerDelay.connect(flangerFeedback); flangerFeedback.connect(flangerDelay);
 let flangerWet = audioContext.createGain(); flangerWet.gain.value = 0;
 let lfo = audioContext.createOscillator(); let lfoGain = audioContext.createGain();
@@ -79,56 +74,55 @@ function createImpulseResponse(duration=2.5, decay=3){
 }
 convolver.buffer = createImpulseResponse();
 
+// Pitch Shifter
+let semitones = 0;
+const pitchValueDiv = document.getElementById("pitchValue");
+
 // File Input
 document.getElementById("fileInput").addEventListener("change", function(e){
   let reader = new FileReader();
   reader.onload = function(ev){
-    audioContext.decodeAudioData(ev.target.result, function(b){ buffer = b; });
+    audioContext.decodeAudioData(ev.target.result, function(buffer){
+      audioBuffer = buffer;
+    });
   };
   reader.readAsArrayBuffer(e.target.files[0]);
 });
 
-// Play Funktion mit SoundTouch
+// Play
 function playAudio(){
-  if(!buffer) return;
-  if(sourceNode) sourceNode.disconnect();
+  if(!audioBuffer) return;
+  if(bufferSource) bufferSource.disconnect();
 
-  // SoundTouch Filter
-  let pitchRatio = Math.pow(2,semitones/12);
-  let soundTouch = new soundtouch.SoundTouch(buffer.sampleRate);
-  soundTouch.pitch = pitchRatio;
+  bufferSource = audioContext.createBufferSource();
+  bufferSource.buffer = audioBuffer;
 
-  let source = new soundtouch.SimpleSource(buffer);
-  let filter = new soundtouch.SimpleFilter(source,soundTouch);
+  // Pitch mit detune (±12 Semitones = ±1200 Cent)
+  bufferSource.detune.value = semitones*100;
 
-  let scriptNode = audioContext.createScriptProcessor(4096, buffer.numberOfChannels, buffer.numberOfChannels);
-  scriptNode.onaudioprocess = function(e){
-    for(let ch=0;ch<e.outputBuffer.numberOfChannels;ch++){
-      let outputData = e.outputBuffer.getChannelData(ch);
-      let inputData = new Float32Array(4096);
-      let framesExtracted = filter.extract(inputData,4096);
-      if(framesExtracted===0){ scriptNode.disconnect(); return; }
-      for(let i=0;i<framesExtracted;i++) outputData[i] = inputData[i];
-    }
-  };
+  // Pitch Slider Speed + Pitch
+  bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
 
-  scriptNode.connect(dryGain); dryGain.connect(audioContext.destination);
-  scriptNode.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
-  scriptNode.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
+  // Effektkette
+  bufferSource.connect(dryGain); dryGain.connect(audioContext.destination);
+  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
+  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
 
-  sourceNode = scriptNode;
+  bufferSource.start();
 }
 
 // Stop
 document.getElementById("playBtn").addEventListener("click", playAudio);
-document.getElementById("stopBtn").addEventListener("click", function(){ if(sourceNode) sourceNode.disconnect(); });
-
-// Pitch Slider (Speed+Pitch)
-document.getElementById("pitchControl").addEventListener("input", function(e){
-  pitchSlider = parseFloat(e.target.value);
+document.getElementById("stopBtn").addEventListener("click", function(){
+  if(bufferSource) bufferSource.stop();
 });
 
-// Flanger + Reverb
+// Pitch Slider
+document.getElementById("pitchControl").addEventListener("input", function(e){
+  if(bufferSource) bufferSource.playbackRate.value = parseFloat(e.target.value);
+});
+
+// Effekte
 function updateMix(){
   flangerWet.gain.value = parseFloat(document.getElementById("flangerControl").value);
   reverbWet.gain.value = parseFloat(document.getElementById("reverbControl").value);
@@ -137,12 +131,14 @@ function updateMix(){
 document.getElementById("flangerControl").addEventListener("input",updateMix);
 document.getElementById("reverbControl").addEventListener("input",updateMix);
 
-// Pitch Buttons
+// Pitch Buttons ±1 Semitone
 document.getElementById("pitchUp").addEventListener("click", function(){
-  if(semitones<12) semitones++; pitchValueDiv.textContent=semitones;
+  if(semitones<12) semitones++;
+  pitchValueDiv.textContent = semitones;
 });
 document.getElementById("pitchDown").addEventListener("click", function(){
-  if(semitones>-12) semitones--; pitchValueDiv.textContent=semitones;
+  if(semitones>-12) semitones--;
+  pitchValueDiv.textContent = semitones;
 });
 </script>
 
