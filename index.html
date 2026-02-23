@@ -2,28 +2,27 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>MP3 Player – Stable Version</title>
+<title>MP3 Player – Extreme Rubberband Version</title>
 <style>
 body { font-family: Arial; background:#111; color:white; padding:20px; }
 label { display:block; margin-top:15px; }
-input[type="range"] { width:300px; }
+input[type="range"] { width:400px; }
 button { margin:5px; padding:8px 16px; }
 #pitchValue { font-size:18px; margin-left:10px; }
 </style>
 </head>
 <body>
 
-<h2>MP3 Player – Pitch + Flanger + Reverb (mit Rubberband)</h2>
+<h2>MP3 Player – Extreme Pitch (10% – 400%)</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
 <div>
-  <button id="playBtn">Play / Resume</button>
-  <button id="stopBtn">Pause</button>
+  <button id="playPauseBtn">Play</button>
 
   <label>
-    Pitch (Tempo gekoppelt):
-    <input type="range" id="pitchControl" min="0.2" max="1.5" step="0.01" value="1">
+    Pitch / Speed:
+    <input type="range" id="pitchControl" min="0.1" max="4.0" step="0.01" value="1">
     <span id="pitchValue">1.00</span>
   </label>
 
@@ -38,7 +37,6 @@ button { margin:5px; padding:8px 16px; }
   </label>
 </div>
 
-<!-- Rubberband Processor einbinden -->
 <script src="js/rubberband-processor.js"></script>
 
 <script>
@@ -47,16 +45,23 @@ let audioBuffer = null;
 let bufferSource = null;
 let rubberbandProcessor = null;
 
-// Pause/Resume Variablen
 let startTime = 0;
 let pauseOffset = 0;
+let isPlaying = false;
 
-// === EFFECT NODES ===
-let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
+// EFFECTS
+let dryGain = audioContext.createGain();
+let flangerDelay = audioContext.createDelay();
+let flangerFeedback = audioContext.createGain();
+let flangerWet = audioContext.createGain();
+let convolver = audioContext.createConvolver();
+let reverbWet = audioContext.createGain();
 
-let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
-let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.7;
-let flangerWet = audioContext.createGain(); flangerWet.gain.value = 0;
+dryGain.gain.value = 1;
+flangerDelay.delayTime.value = 0.003;
+flangerFeedback.gain.value = 0.7;
+flangerWet.gain.value = 0;
+reverbWet.gain.value = 0;
 
 flangerDelay.connect(flangerFeedback);
 flangerFeedback.connect(flangerDelay);
@@ -69,9 +74,6 @@ lfo.connect(lfoGain);
 lfoGain.connect(flangerDelay.delayTime);
 lfo.start();
 
-let convolver = audioContext.createConvolver();
-let reverbWet = audioContext.createGain();
-reverbWet.gain.value = 0;
 function createImpulseResponse(duration=2, decay=2.5){
   let rate = audioContext.sampleRate;
   let length = rate * duration;
@@ -86,41 +88,31 @@ function createImpulseResponse(duration=2, decay=2.5){
 }
 convolver.buffer = createImpulseResponse();
 
-// === FILE LOAD ===
+// FILE LOAD
 document.getElementById("fileInput").addEventListener("change", function(e){
   let reader = new FileReader();
   reader.onload = function(ev){
     audioContext.decodeAudioData(ev.target.result).then(buffer=>{
       audioBuffer = buffer;
-      pauseOffset = 0; // Reset bei neuem Song
+      pauseOffset = 0;
     });
   };
   reader.readAsArrayBuffer(e.target.files[0]);
 });
 
-// === PLAY / RESUME ===
-function playAudio(){
+function startPlayback(){
   if(!audioBuffer) return;
 
-  if(bufferSource){
-    bufferSource.stop();
-    bufferSource.disconnect();
-    bufferSource = null;
-  }
-
-  // Rubberband initialisieren
   if(typeof RubberbandProcessor !== 'undefined'){
     rubberbandProcessor = new RubberbandProcessor(audioContext, audioBuffer);
-    let pitchVal = parseFloat(document.getElementById("pitchControl").value);
-    rubberbandProcessor.setPitch(pitchVal);
+    rubberbandProcessor.setPitch(parseFloat(pitchControl.value));
     bufferSource = rubberbandProcessor.getSource();
   } else {
     bufferSource = audioContext.createBufferSource();
     bufferSource.buffer = audioBuffer;
-    bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
+    bufferSource.playbackRate.value = parseFloat(pitchControl.value);
   }
 
-  // Routing
   bufferSource.connect(dryGain);
   dryGain.connect(audioContext.destination);
 
@@ -136,44 +128,55 @@ function playAudio(){
   bufferSource.start(0, pauseOffset);
 }
 
-// === PAUSE ===
-function pauseAudio(){
+function pausePlayback(){
   if(bufferSource){
-    pauseOffset += audioContext.currentTime - startTime; // Position merken
+    pauseOffset += audioContext.currentTime - startTime;
     bufferSource.stop();
     bufferSource.disconnect();
     bufferSource = null;
   }
 }
 
-document.getElementById("playBtn").addEventListener("click", playAudio);
-document.getElementById("stopBtn").addEventListener("click", pauseAudio);
+const playPauseBtn = document.getElementById("playPauseBtn");
+playPauseBtn.addEventListener("click", function(){
+  if(!isPlaying){
+    startPlayback();
+    playPauseBtn.textContent = "Pause";
+    isPlaying = true;
+  } else {
+    pausePlayback();
+    playPauseBtn.textContent = "Play";
+    isPlaying = false;
+  }
+});
 
-// === PITCH ===
-const pitchSlider = document.getElementById("pitchControl");
+// Pitch live ändern
+const pitchControl = document.getElementById("pitchControl");
 const pitchValue = document.getElementById("pitchValue");
-pitchSlider.addEventListener("input", function(e){
+
+pitchControl.addEventListener("input", function(e){
   let val = parseFloat(e.target.value);
   pitchValue.textContent = val.toFixed(2);
-  if(bufferSource){
+
+  if(isPlaying){
     if(rubberbandProcessor){
       rubberbandProcessor.setPitch(val);
-    } else {
+    } else if(bufferSource){
       bufferSource.playbackRate.value = val;
     }
   }
 });
 
-// === MIX UPDATE ===
+// Mix
 function updateMix(){
-  let flanger = parseFloat(document.getElementById("flangerControl").value);
-  let reverb = parseFloat(document.getElementById("reverbControl").value);
+  let flanger = parseFloat(flangerControl.value);
+  let reverb = parseFloat(reverbControl.value);
   flangerWet.gain.value = flanger;
   reverbWet.gain.value = reverb;
   dryGain.gain.value = 1 - Math.max(flanger, reverb);
 }
-document.getElementById("flangerControl").addEventListener("input", updateMix);
-document.getElementById("reverbControl").addEventListener("input", updateMix);
+flangerControl.addEventListener("input", updateMix);
+reverbControl.addEventListener("input", updateMix);
 </script>
 
 </body>
