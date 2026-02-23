@@ -1,222 +1,195 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>MP3 Player – Waveform Version</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PURPLE PLAYER – Rubberband & Effects</title>
+
 <style>
-body { font-family: Arial; background:#111; color:white; padding:20px; }
-label { display:block; margin-top:15px; }
-input[type="range"] { width:400px; }
-button { margin:5px; padding:8px 16px; }
-#pitchValue { font-size:18px; margin-left:10px; }
-canvas { width:100%; height:100px; background:#222; margin-bottom:20px; }
+:root{
+  --purple:#7b2cff;
+  --uiBg:#ffffff;
+  --vidBrightness:1.17;
+  --vidContrast:1.00;
+  --edge:#cfcfe2;
+  --shadow: rgba(0,0,0,.18);
+  --sliderThumbImg: url("./fht.png");
+  --thumbSize:52px;
+}
+
+/* Grunddesign + Panel Styles übernommen aus Index.html */
+*{box-sizing:border-box;}
+body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; display:flex; justify-content:center;}
+.plugin{width:min(900px,100vw); padding:10px;}
+.panel{border-radius:14px; background: var(--uiBg); border:1px solid var(--edge); box-shadow:0 10px 30px var(--shadow); padding:14px; position:relative; overflow:hidden;}
+.panel::before,.panel::after{content:""; position:absolute; inset:0; pointer-events:none;}
+.main{display:grid; grid-template-columns:330px 1fr; gap:14px; align-items:start; position:relative; z-index:1;}
+.module{border-radius:12px; padding:10px;}
+.screen{border-radius:10px; overflow:hidden; background:#000;}
+video{width:100%; height:auto; display:block; background:#000; object-fit:contain; filter: brightness(var(--vidBrightness)) contrast(var(--vidContrast));}
+
+/* Controls */
+.controls{display:flex; flex-direction:column; gap:14px; align-items:center;}
+.logo img{height:150px; user-select:none; -webkit-user-drag:none;}
+.triple{display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:4px; align-items:start;}
+.ctrlCard{min-width:0; border-radius:12px; background: var(--uiBg); border:1px solid rgba(0,0,0,.06); box-shadow:0 10px 18px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.06); padding:8px 4px;}
+.ctrl-label{text-align:center; font-size:11px; font-weight:900; letter-spacing:0.16em; color:var(--purple); margin-bottom:6px;}
+.slider-wrap{height:240px; display:flex; align-items:center; justify-content:center; position:relative;}
+.vslider{-webkit-appearance:none; appearance:none; width:152px; height:9px; border-radius:999px; transform:rotate(-90deg); background:linear-gradient(to right,var(--purple) 0%,var(--purple) 0%,#ddd 0%,#ddd 100%); outline:none;}
+.vslider::-webkit-slider-thumb{-webkit-appearance:none; width: var(--thumbSize); height: var(--thumbSize); border-radius:0; border:none; background-color:transparent; background-image: var(--sliderThumbImg); background-repeat:no-repeat; background-position:center; background-size:contain; transform: rotate(90deg); cursor:pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,.20));}
+.knobWrap{height:240px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative;}
+.knob{width:74px; height:74px; border-radius:50%; position:relative; user-select:none; touch-action:none; cursor:grab; box-shadow:0 10px 18px rgba(0,0,0,.10); display:grid; place-items:center; overflow:hidden;}
+.knobImg{width:100%; height:100%; object-fit:contain; transform: rotate(var(--a,0deg)); transform-origin:50% 50%; will-change: transform; user-select:none; pointer-events:none;}
+.knobTip{position:absolute; top:32px; left:50%; transform:translate(-50%,-120%); padding:5px 8px; font-size:11px; font-weight:800; background:var(--purple); color:#fff; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .12s ease; white-space:nowrap;}
+.bottomRow{margin-top:12px; display:grid; grid-template-columns:280px 1fr; gap:12px; position:relative; z-index:1;}
+.playerPanel{border-radius:12px; background: var(--uiBg); border:1px solid rgba(0,0,0,.08); box-shadow:0 10px 18px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.06); padding:10px; display:flex; flex-direction:column; gap:10px; min-height:160px;}
+.wavePanel{border-radius:12px; background: var(--uiBg); border:1px solid rgba(0,0,0,.08); box-shadow:0 10px 18px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.06); padding:10px; position:relative;}
+#waveCanvas{width:100%; height:120px; display:block; border-radius:10px; background: linear-gradient(180deg, rgba(123,44,255,.06), rgba(0,0,0,.02)); border:1px solid rgba(0,0,0,.06);}
 </style>
 </head>
+
 <body>
+<div class="plugin">
+  <div class="panel">
 
-<h2>MP3 Player – Waveform + Rubberband</h2>
+    <div class="main">
+      <!-- VIDEO -->
+      <div class="module">
+        <div class="screen">
+          <div class="stage">
+            <video id="video" src="video.mp4" playsinline muted preload="metadata"></video>
+          </div>
+        </div>
+      </div>
 
-<input type="file" id="fileInput" accept="audio/mp3">
+      <!-- CONTROLS -->
+      <div class="controls">
+        <div class="logo">
+          <img src="logo.png" alt="Purple Player">
+        </div>
+        <div class="triple">
+          <div class="ctrlCard">
+            <div class="ctrl-label">LEAN</div>
+            <div class="slider-wrap" id="wrapLean">
+              <input type="range" class="vslider" id="sliderLean" min="0" max="648" value="363" step="1">
+              <div class="slider-tooltip" id="tipLean">56%</div>
+            </div>
+          </div>
 
-<canvas id="waveform"></canvas>
+          <div class="ctrlCard">
+            <div class="ctrl-label">REVERB</div>
+            <div class="knobWrap">
+              <div class="knobTip" id="tipReverb">50.0%</div>
+              <input type="range" id="reverb" min="0" max="1" value="0.5" step="0.001" style="position:absolute;opacity:0;width:0;height:0;">
+              <div class="knob" id="reverb_ui"><img class="knobImg" src="./knob.png"></div>
+            </div>
+          </div>
 
-<div>
-  <button id="playPauseBtn">Play</button>
+          <div class="ctrlCard">
+            <div class="ctrl-label">FLANGER</div>
+            <div class="slider-wrap" id="wrapFlanger">
+              <input type="range" class="vslider" id="sliderFlanger" min="0" max="1000" value="0" step="1">
+              <div class="slider-tooltip" id="tipFlanger">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <label>
-    Pitch / Speed:
-    <input type="range" id="pitchControl" min="0.1" max="4.0" step="0.01" value="1">
-    <span id="pitchValue">1.00</span>
-  </label>
+    <!-- Player & Waveform -->
+    <div class="bottomRow">
+      <div class="playerPanel">
+        <div class="playerTop">
+          <div class="playerTitle">MUSIC PLAYER</div>
+          <button class="smallBtn purple" id="btnAdd">+ Add</button>
+          <input class="hiddenInput" id="filePick" type="file" accept="audio/*" multiple>
+        </div>
+        <div class="nowPlaying" id="nowPlaying"><div>Keine Tracks geladen</div><span>Füge MP3/WAV/etc. hinzu</span></div>
+        <div class="playerControls">
+          <button class="iconBtn" id="btnPrev">⟨⟨</button>
+          <button class="iconBtn play" id="btnPlay">▶</button>
+          <button class="iconBtn" id="btnNext">⟩⟩</button>
+          <div class="playerVol"><label>VOL</label><input id="vol" class="hslider" type="range" min="0" max="1" value="0.85" step="0.001"></div>
+        </div>
+        <div class="playlist">
+          <div class="playlistHeader"><div>PLAYLIST</div><button class="smallBtn" id="btnClear">Clear</button></div>
+          <div class="playlistList" id="playlist"></div>
+        </div>
+        <audio id="audio" preload="metadata"></audio>
+      </div>
 
-  <label>
-    Flanger:
-    <input type="range" id="flangerControl" min="0" max="1" step="0.01" value="0">
-  </label>
+      <div class="wavePanel">
+        <div class="waveTop"><div class="waveTitle">WAVEFORM</div><div class="waveMeta" id="waveMeta">Füge einen Track hinzu…</div></div>
+        <canvas id="waveCanvas"></canvas>
+        <div class="waveHint">Tipp: Klicke in die Waveform um im Track zu springen.</div>
+      </div>
+    </div>
 
-  <label>
-    Reverb:
-    <input type="range" id="reverbControl" min="0" max="1" step="0.01" value="0">
-  </label>
+  </div>
 </div>
 
 <script src="js/rubberband-processor.js"></script>
-
 <script>
-const canvas = document.getElementById('waveform');
-const ctx = canvas.getContext('2d');
-let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-let audioBuffer = null;
-let bufferSource = null;
-let rubberbandProcessor = null;
+// ---------------- AUDIO SETUP ----------------
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let bufferSource=null, audioBuffer=null, rubberbandProcessor=null, startTime=0, pauseOffset=0, isPlaying=false;
 
-let startTime = 0;
-let pauseOffset = 0;
-let isPlaying = false;
+// ---------------- EFFECTS ----------------
+let dryGain = audioCtx.createGain();
+let flangerDelay = audioCtx.createDelay();
+let flangerFeedback = audioCtx.createGain();
+let flangerWet = audioCtx.createGain();
+let convolver = audioCtx.createConvolver();
+let reverbWet = audioCtx.createGain();
 
-// EFFECTS
-let dryGain = audioContext.createGain();
-let flangerDelay = audioContext.createDelay();
-let flangerFeedback = audioContext.createGain();
-let flangerWet = audioContext.createGain();
-let convolver = audioContext.createConvolver();
-let reverbWet = audioContext.createGain();
+dryGain.gain.value=1; flangerDelay.delayTime.value=0.003; flangerFeedback.gain.value=0.7;
+flangerWet.gain.value=0; reverbWet.gain.value=0;
+flangerDelay.connect(flangerFeedback); flangerFeedback.connect(flangerDelay);
 
-dryGain.gain.value = 1;
-flangerDelay.delayTime.value = 0.003;
-flangerFeedback.gain.value = 0.7;
-flangerWet.gain.value = 0;
-reverbWet.gain.value = 0;
+let lfo = audioCtx.createOscillator();
+let lfoGain = audioCtx.createGain();
+lfo.frequency.value=0.3; lfoGain.gain.value=0.001;
+lfo.connect(lfoGain); lfoGain.connect(flangerDelay.delayTime); lfo.start();
+convolver.buffer = (function(){let ir = audioCtx.createBuffer(2,audioCtx.sampleRate*2,audioCtx.sampleRate); for(let c=0;c<2;c++){let ch = ir.getChannelData(c); for(let i=0;i<ir.length;i++){ch[i]=(Math.random()*2-1)*Math.pow(1-i/ir.length,2.5);}} return ir;})();
 
-flangerDelay.connect(flangerFeedback);
-flangerFeedback.connect(flangerDelay);
-
-let lfo = audioContext.createOscillator();
-let lfoGain = audioContext.createGain();
-lfo.frequency.value = 0.3;
-lfoGain.gain.value = 0.001;
-lfo.connect(lfoGain);
-lfoGain.connect(flangerDelay.delayTime);
-lfo.start();
-
-function createImpulseResponse(duration=2, decay=2.5){
-  let rate = audioContext.sampleRate;
-  let length = rate * duration;
-  let impulse = audioContext.createBuffer(2, length, rate);
-  for(let c=0;c<2;c++){
-    let channel = impulse.getChannelData(c);
-    for(let i=0;i<length;i++){
-      channel[i] = (Math.random()*2-1) * Math.pow(1-i/length, decay);
-    }
-  }
-  return impulse;
-}
-convolver.buffer = createImpulseResponse();
-
-// FILE LOAD
-document.getElementById("fileInput").addEventListener("change", function(e){
-  let reader = new FileReader();
-  reader.onload = function(ev){
-    audioContext.decodeAudioData(ev.target.result).then(buffer=>{
-      audioBuffer = buffer;
-      pauseOffset = 0;
-      drawWaveform(buffer);
-    });
-  };
-  reader.readAsArrayBuffer(e.target.files[0]);
-});
-
-// Draw waveform
+// ---------------- WAVEFORM ----------------
+const waveCanvas = document.getElementById("waveCanvas");
+const wctx = waveCanvas.getContext("2d");
+function fitCanvas(){ const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1)); const r=waveCanvas.getBoundingClientRect(); waveCanvas.width=Math.floor(r.width*dpr); waveCanvas.height=Math.floor(r.height*dpr); return {dpr}; }
 function drawWaveform(buffer){
-  const width = canvas.width;
-  const height = canvas.height;
-  ctx.clearRect(0,0,width,height);
-  const data = buffer.getChannelData(0); // nur links
-  const step = Math.ceil(data.length / width);
-  const amp = height / 2;
-  ctx.fillStyle = '#555';
-  for(let i=0; i<width; i++){
-    let min = 1.0, max = -1.0;
-    for(let j=0;j<step;j++){
-      let datum = data[(i*step)+j];
-      if(datum < min) min = datum;
-      if(datum > max) max = datum;
-    }
-    ctx.fillRect(i, (1+min)*amp, 1, Math.max(1,(max-min)*amp));
-  }
+  const {dpr}=fitCanvas(); const W=waveCanvas.width,H=waveCanvas.height; wctx.clearRect(0,0,W,H);
+  const data = buffer.getChannelData(0); const step=Math.ceil(data.length/W); const amp=H/2;
+  wctx.fillStyle='rgba(123,44,255,0.04)'; wctx.fillRect(0,0,W,H); wctx.strokeStyle='rgba(123,44,255,0.95)'; wctx.lineWidth=Math.max(1,1.2*dpr); wctx.lineCap='round'; wctx.beginPath();
+  for(let i=0;i<W;i++){ let min=1,max=-1; for(let j=0;j<step;j++){ let v=data[i*step+j]; if(v<min)min=v;if(v>max)max=v;} wctx.moveTo(i,(H/2-(max-min)*amp/2)); wctx.lineTo(i,(H/2+(max-min)*amp/2));} wctx.stroke();
 }
 
-// Draw play position
-function drawProgress(){
-  if(!audioBuffer || !isPlaying) return;
-  const width = canvas.width;
-  const height = canvas.height;
-  const currentTime = audioContext.currentTime - startTime + pauseOffset;
-  const progress = Math.min(currentTime/audioBuffer.duration,1);
-  ctx.fillStyle = 'rgba(255,0,0,0.5)';
-  ctx.fillRect(progress*width,0,2,height);
-  requestAnimationFrame(drawProgress);
-}
-
-// PLAY/PAUSE
-const playPauseBtn = document.getElementById("playPauseBtn");
-const pitchControl = document.getElementById("pitchControl");
-const pitchValue = document.getElementById("pitchValue");
-const flangerControl = document.getElementById("flangerControl");
-const reverbControl = document.getElementById("reverbControl");
-
+// ---------------- PLAYBACK ----------------
 function startPlayback(){
   if(!audioBuffer) return;
-  if(bufferSource){ bufferSource.stop(); bufferSource.disconnect(); bufferSource=null; }
-
-  if(typeof RubberbandProcessor !== 'undefined'){
-    rubberbandProcessor = new RubberbandProcessor(audioContext, audioBuffer);
-    rubberbandProcessor.setPitch(parseFloat(pitchControl.value));
-    bufferSource = rubberbandProcessor.getSource();
-  } else {
-    bufferSource = audioContext.createBufferSource();
-    bufferSource.buffer = audioBuffer;
-    bufferSource.playbackRate.value = parseFloat(pitchControl.value);
-  }
-
-  bufferSource.connect(dryGain);
-  dryGain.connect(audioContext.destination);
-
-  bufferSource.connect(flangerDelay);
-  flangerDelay.connect(flangerWet);
-  flangerWet.connect(audioContext.destination);
-
-  bufferSource.connect(convolver);
-  convolver.connect(reverbWet);
-  reverbWet.connect(audioContext.destination);
-
-  startTime = audioContext.currentTime;
-  bufferSource.start(0,pauseOffset);
-  isPlaying = true;
-  drawProgress();
+  if(bufferSource){ bufferSource.stop(); bufferSource.disconnect(); bufferSource=null;}
+  if(typeof RubberbandProcessor!=="undefined"){ rubberbandProcessor=new RubberbandProcessor(audioCtx,audioBuffer); rubberbandProcessor.setPitch(sliderLean.value/648); bufferSource=rubberbandProcessor.getSource(); }
+  else{ bufferSource=audioCtx.createBufferSource(); bufferSource.buffer=audioBuffer; bufferSource.playbackRate.value=sliderLean.value/648; }
+  bufferSource.connect(dryGain); dryGain.connect(audioCtx.destination);
+  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioCtx.destination);
+  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioCtx.destination);
+  startTime=audioCtx.currentTime; bufferSource.start(0,pauseOffset); isPlaying=true;
 }
+function pausePlayback(){ if(bufferSource){ pauseOffset+=audioCtx.currentTime-startTime; bufferSource.stop(); bufferSource.disconnect(); bufferSource=null; isPlaying=false; }}
 
-function pausePlayback(){
-  if(bufferSource){
-    pauseOffset += audioContext.currentTime - startTime;
-    bufferSource.stop();
-    bufferSource.disconnect();
-    bufferSource=null;
-    isPlaying=false;
-  }
-}
+// ---------------- CONTROLS ----------------
+const sliderLean=document.getElementById("sliderLean");
+sliderLean.addEventListener("input",()=>{ if(bufferSource) bufferSource.playbackRate.value=sliderLean.value/648; });
 
-playPauseBtn.addEventListener("click",function(){
-  if(!isPlaying){
-    startPlayback();
-    playPauseBtn.textContent="Pause";
-  } else {
-    pausePlayback();
-    playPauseBtn.textContent="Play";
-  }
-});
+const sliderFlanger=document.getElementById("sliderFlanger");
+sliderFlanger.addEventListener("input",()=>{ flangerWet.gain.value = sliderFlanger.value/1000; });
 
-// Pitch live ändern
-pitchControl.addEventListener("input", function(){
-  let val = parseFloat(pitchControl.value);
-  pitchValue.textContent = val.toFixed(2);
-  if(isPlaying){
-    if(rubberbandProcessor) rubberbandProcessor.setPitch(val);
-    else if(bufferSource) bufferSource.playbackRate.value = val;
-  }
-});
+const reverbInput=document.getElementById("reverb");
+reverbInput.addEventListener("input",()=>{ reverbWet.gain.value = Number(reverbInput.value); });
 
-// Mix
-function updateMix(){
-  let flanger = parseFloat(flangerControl.value);
-  let reverb = parseFloat(reverbControl.value);
-  flangerWet.gain.value = flanger;
-  reverbWet.gain.value = reverb;
-  dryGain.gain.value = 1 - Math.max(flanger, reverb);
-}
-flangerControl.addEventListener("input", updateMix);
-reverbControl.addEventListener("input", updateMix);
+// ---------------- PLAYER ----------------
+const audioEl=document.getElementById("audio");
+const btnPlay=document.getElementById("btnPlay");
+btnPlay.addEventListener("click",()=>{ if(!isPlaying){ startPlayback(); btnPlay.textContent='⏸'; } else { pausePlayback(); btnPlay.textContent='▶'; }});
 </script>
-
 </body>
 </html>
