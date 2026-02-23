@@ -13,7 +13,7 @@ button { margin:5px; padding:8px 16px; }
 </head>
 <body>
 
-<h2>MP3 Player – Pitch + Flanger + Reverb</h2>
+<h2>MP3 Player – Pitch + Flanger + Reverb (mit Rubberband)</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
@@ -37,6 +37,9 @@ button { margin:5px; padding:8px 16px; }
     <input type="range" id="reverbControl" min="0" max="1" step="0.01" value="0">
   </label>
 </div>
+
+<!-- Rubberband Processor einbinden -->
+<script src="js/rubberband-processor.js"></script>
 
 <script>
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -98,6 +101,9 @@ document.getElementById("fileInput").addEventListener("change", function(e){
   reader.readAsArrayBuffer(e.target.files[0]);
 });
 
+// === RUBBERBAND PROCESSOR ===
+let rubberbandProcessor = null;
+
 // === PLAY ===
 function playAudio(){
   if(!audioBuffer) return;
@@ -110,8 +116,15 @@ function playAudio(){
   bufferSource = audioContext.createBufferSource();
   bufferSource.buffer = audioBuffer;
 
-  bufferSource.playbackRate.value =
-    parseFloat(document.getElementById("pitchControl").value);
+  // Rubberband-Prozess initialisieren, falls verfügbar
+  if(typeof RubberbandProcessor !== 'undefined'){
+    rubberbandProcessor = new RubberbandProcessor(audioContext, audioBuffer);
+    let pitchVal = parseFloat(document.getElementById("pitchControl").value);
+    rubberbandProcessor.setPitch(pitchVal); // Pitch via Rubberband
+    bufferSource = rubberbandProcessor.getSource(); // ersetzt den normalen BufferSource
+  } else {
+    bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
+  }
 
   // routing
   bufferSource.connect(dryGain);
@@ -147,7 +160,11 @@ pitchSlider.addEventListener("input", function(e){
   let val = parseFloat(e.target.value);
   pitchValue.textContent = val.toFixed(2);
   if(bufferSource){
-    bufferSource.playbackRate.value = val;
+    if(rubberbandProcessor){
+      rubberbandProcessor.setPitch(val);
+    } else {
+      bufferSource.playbackRate.value = val;
+    }
   }
 });
 
