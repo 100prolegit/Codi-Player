@@ -2,24 +2,27 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>MP3 Player – Pitch + Effekte</title>
+<title>MP3 Player – Mini DJ</title>
 <style>
 body { background:#111; color:white; font-family:Arial; padding:20px; }
-label, button { margin-top:10px; display:block; }
+button, label { margin-top:10px; display:block; }
 input[type="range"] { width:300px; }
 #pitchValue { width:50px; display:inline-block; text-align:center; margin-left:10px; }
+#progressBar { width:100%; height:20px; background:#333; margin-top:10px; position:relative; }
+#progress { height:100%; width:0%; background:#1db954; }
+canvas { width:100%; height:100px; background:#222; margin-top:10px; }
 </style>
 </head>
 <body>
 
-<h2>MP3 Player – Pitch Slider + Flanger & Reverb</h2>
+<h2>MP3 Player – Mini DJ</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
 <button id="playBtn">Play</button>
-<button id="stopBtn">Stop</button>
+<button id="stopBtn">Pause</button>
+<button id="resetBtn">Reset</button>
 
-<!-- Pitch & Tempo Slider -->
 <label>
   Pitch & Tempo Slider:
   <input type="range" id="pitchControl" min="0.5" max="2" step="0.01" value="1">
@@ -36,32 +39,37 @@ input[type="range"] { width:300px; }
   <input type="range" id="reverbControl" min="0" max="1" step="0.01" value="0">
 </label>
 
+<div id="progressBar"><div id="progress"></div></div>
+<canvas id="waveform"></canvas>
+
 <script>
-const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
 let audioBuffer = null;
 let bufferSource = null;
+let startTime = 0;       // Wann das Track gestartet wurde
+let pauseOffset = 0;     // Wo pausiert wurde
+let isPlaying = false;
+let animationFrameId;
 
 // Effekte
-let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
-
-let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
-let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.7;
+let dryGain = ctx.createGain(); dryGain.gain.value = 1;
+let flangerDelay = ctx.createDelay(); flangerDelay.delayTime.value = 0.003;
+let flangerFeedback = ctx.createGain(); flangerFeedback.gain.value = 0.7;
 flangerDelay.connect(flangerFeedback); flangerFeedback.connect(flangerDelay);
-let flangerWet = audioContext.createGain(); flangerWet.gain.value = 0;
-let lfo = audioContext.createOscillator(); let lfoGain = audioContext.createGain();
+let flangerWet = ctx.createGain(); flangerWet.gain.value = 0;
+let lfo = ctx.createOscillator(); let lfoGain = ctx.createGain();
 lfo.type = "sine"; lfo.frequency.value = 0.3; lfoGain.gain.value = 0.001;
 lfo.connect(lfoGain); lfoGain.connect(flangerDelay.delayTime); lfo.start();
-
-let convolver = audioContext.createConvolver();
-let reverbWet = audioContext.createGain(); reverbWet.gain.value = 0;
+let convolver = ctx.createConvolver();
+let reverbWet = ctx.createGain(); reverbWet.gain.value = 0;
 function createImpulseResponse(duration=2.5, decay=3){
-  let sampleRate = audioContext.sampleRate;
+  let sampleRate = ctx.sampleRate;
   let length = sampleRate*duration;
-  let impulse = audioContext.createBuffer(2,length,sampleRate);
+  let impulse = ctx.createBuffer(2,length,sampleRate);
   for(let c=0;c<2;c++){
     let channel = impulse.getChannelData(c);
     for(let i=0;i<length;i++){
-      channel[i] = (Math.random()*2-1) * Math.pow(1-i/length, decay);
+      channel[i] = (Math.random()*2-1)*Math.pow(1-i/length,decay);
     }
   }
   return impulse;
@@ -69,42 +77,57 @@ function createImpulseResponse(duration=2.5, decay=3){
 convolver.buffer = createImpulseResponse();
 
 // File Input
-document.getElementById("fileInput").addEventListener("change", async e => {
+document.getElementById("fileInput").addEventListener("change", async e=>{
   const file = e.target.files[0];
-  if (!file) return;
-  const arrayBuffer = await file.arrayBuffer();
-  audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  if(!file) return;
+  const ab = await file.arrayBuffer();
+  audioBuffer = await ctx.decodeAudioData(ab);
+  drawWaveform();
 });
 
-// Play Audio
+// Play
 function playAudio(){
-  if(!audioBuffer) return;
-  if(bufferSource) bufferSource.disconnect();
-
-  bufferSource = audioContext.createBufferSource();
+  if(!audioBuffer || isPlaying) return;
+  bufferSource = ctx.createBufferSource();
   bufferSource.buffer = audioBuffer;
-  bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
+  bufferSource.playbackRate.value = parseFloat(pitchSlider.value);
 
-  // Audio-Chain: Buffer → Effekte → Output
-  bufferSource.connect(dryGain); dryGain.connect(audioContext.destination);
-  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
-  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
+  bufferSource.connect(dryGain); dryGain.connect(ctx.destination);
+  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(ctx.destination);
+  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(ctx.destination);
 
-  bufferSource.start();
+  startTime = ctx.currentTime - pauseOffset;
+  bufferSource.start(0, pauseOffset);
+  isPlaying = true;
+
+  bufferSource.onended = ()=> { isPlaying = false; pauseOffset = 0; cancelAnimationFrame(animationFrameId); updateProgressBar(); }
+
+  updateProgressBar();
 }
 
-document.getElementById("playBtn").addEventListener("click", playAudio);
-document.getElementById("stopBtn").addEventListener("click", () => {
+// Pause
+function pauseAudio(){
+  if(!isPlaying) return;
+  bufferSource.stop();
+  pauseOffset = ctx.currentTime - startTime;
+  isPlaying = false;
+  cancelAnimationFrame(animationFrameId);
+}
+
+// Reset
+function resetAudio(){
   if(bufferSource) bufferSource.stop();
-});
+  pauseOffset = 0;
+  isPlaying = false;
+  updateProgressBar();
+}
 
 // Pitch Slider
 const pitchSlider = document.getElementById("pitchControl");
 const pitchValueSpan = document.getElementById("pitchValue");
-pitchSlider.addEventListener("input", e => {
-  const val = parseFloat(e.target.value);
-  pitchValueSpan.textContent = val.toFixed(2);
-  if(bufferSource) bufferSource.playbackRate.value = val;
+pitchSlider.addEventListener("input", e=>{
+  pitchValueSpan.textContent = parseFloat(e.target.value).toFixed(2);
+  if(bufferSource) bufferSource.playbackRate.value = parseFloat(e.target.value);
 });
 
 // Effekte Mix
@@ -115,6 +138,43 @@ function updateMix(){
 }
 document.getElementById("flangerControl").addEventListener("input",updateMix);
 document.getElementById("reverbControl").addEventListener("input",updateMix);
+
+// Progress Bar
+const progressDiv = document.getElementById("progress");
+function updateProgressBar(){
+  if(!audioBuffer) return;
+  let current = isPlaying ? ctx.currentTime - startTime : pauseOffset;
+  let percent = Math.min(100, (current / audioBuffer.duration) * 100);
+  progressDiv.style.width = percent + "%";
+  if(isPlaying) animationFrameId = requestAnimationFrame(updateProgressBar);
+}
+
+// Waveform Canvas
+const canvas = document.getElementById("waveform");
+const canvasCtx = canvas.getContext("2d");
+function drawWaveform(){
+  if(!audioBuffer) return;
+  const width = canvas.width;
+  const height = canvas.height;
+  const data = audioBuffer.getChannelData(0);
+  canvasCtx.fillStyle = "#222";
+  canvasCtx.fillRect(0,0,width,height);
+  canvasCtx.strokeStyle = "#1db954";
+  canvasCtx.beginPath();
+  const step = Math.ceil(data.length / width);
+  for(let i=0;i<width;i++){
+    const min = Math.min(...data.slice(i*step,(i+1)*step));
+    const max = Math.max(...data.slice(i*step,(i+1)*step));
+    canvasCtx.moveTo(i, (1+min)*height/2);
+    canvasCtx.lineTo(i, (1+max)*height/2);
+  }
+  canvasCtx.stroke();
+}
+
+// Buttons
+document.getElementById("playBtn").addEventListener("click", playAudio);
+document.getElementById("stopBtn").addEventListener("click", pauseAudio);
+document.getElementById("resetBtn").addEventListener("click", resetAudio);
 </script>
 
 </body>
