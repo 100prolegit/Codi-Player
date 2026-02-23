@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>MP3 Player – Hochwertiger Pitch + Effekte</title>
+<title>MP3 Player – HQ Pitch + Effekte</title>
 <style>
 body { font-family: Arial; background:#111; color:white; padding:20px; }
 label { display:block; margin-top:15px; }
@@ -14,7 +14,7 @@ button { margin:5px; padding:8px 16px; }
 </head>
 <body>
 
-<h2>MP3 Player – Hochwertiger Pitch, Flanger & Reverb ±12</h2>
+<h2>MP3 Player – HQ Pitch, Flanger & Reverb ±12</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
@@ -42,24 +42,21 @@ button { margin:5px; padding:8px 16px; }
 
 <script>
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-let audioBuffer = null;
+let originalBuffer = null;
+let pitchedBuffer = null;
 let bufferSource = null;
-let pitchNode = null;
 let semitones = 0;
 const pitchValueDiv = document.getElementById("pitchValue");
 
-// --- Effekte Setup ---
+// Effekte
 let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
-
 let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
 let flangerFeedback = audioContext.createGain(); flangerFeedback.gain.value = 0.7;
 flangerDelay.connect(flangerFeedback); flangerFeedback.connect(flangerDelay);
 let flangerWet = audioContext.createGain(); flangerWet.gain.value = 0;
-
 let lfo = audioContext.createOscillator(); let lfoGain = audioContext.createGain();
 lfo.type = "sine"; lfo.frequency.value = 0.3; lfoGain.gain.value = 0.001;
 lfo.connect(lfoGain); lfoGain.connect(flangerDelay.delayTime); lfo.start();
-
 let convolver = audioContext.createConvolver();
 let reverbWet = audioContext.createGain(); reverbWet.gain.value = 0;
 function createImpulseResponse(duration=2.5, decay=3){
@@ -76,95 +73,66 @@ function createImpulseResponse(duration=2.5, decay=3){
 }
 convolver.buffer = createImpulseResponse();
 
-// --- AudioWorklet für hochwertigen Pitch-Shifter ---
-async function initPitchWorklet() {
-  const workletCode = `
-  class GranularPitchProcessor extends AudioWorkletProcessor {
-    static get parameterDescriptors() {
-      return [{name: "semitones", defaultValue: 0, minValue: -12, maxValue: 12}];
-    }
-    constructor() {
-      super();
-      this.buffer = [];
-      this.bufferSize = 2048;
-    }
-    process(inputs, outputs, parameters) {
-      const input = inputs[0];
-      const output = outputs[0];
-      const semitones = parameters.semitones.length > 0 ? parameters.semitones[0] : 0;
-      const pitchRatio = Math.pow(2, semitones/12);
-
-      if(input[0]){
-        for(let channel=0; channel<input.length; channel++){
-          let inChannel = input[channel];
-          let outChannel = output[channel];
-          for(let i=0;i<inChannel.length;i++){
-            let idx = i * pitchRatio;
-            let prev = Math.floor(idx);
-            let next = Math.min(prev+1, inChannel.length-1);
-            let frac = idx-prev;
-            outChannel[i] = inChannel[prev]*(1-frac) + inChannel[next]*frac;
-          }
-        }
-      }
-      return true;
-    }
-  }
-  registerProcessor("granular-pitch-processor", GranularPitchProcessor);
-  `;
-  const blob = new Blob([workletCode], {type: "application/javascript"});
-  await audioContext.audioWorklet.addModule(URL.createObjectURL(blob));
-  pitchNode = new AudioWorkletNode(audioContext, "granular-pitch-processor");
-  pitchNode.parameters.get("semitones").value = semitones;
-}
-initPitchWorklet();
-
-// --- File Input ---
-document.getElementById("fileInput").addEventListener("change", async function(e){
+// File Input
+document.getElementById("fileInput").addEventListener("change", async e=>{
   let file = e.target.files[0];
   if(!file) return;
   let arrayBuffer = await file.arrayBuffer();
-  audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  originalBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  pitchedBuffer = originalBuffer; // Anfangs ungepitcht
 });
 
-// --- Play ---
-function playAudio() {
-  if(!audioBuffer || !pitchNode) return;
+// Pitch-Shift offline (hochwertig)
+async function createPitchedBuffer(buffer, semitones){
+  const ratio = Math.pow(2, semitones/12);
+  const offlineCtx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length / ratio, buffer.sampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = buffer;
+  source.playbackRate.value = ratio;
+  source.connect(offlineCtx.destination);
+  source.start();
+  return await offlineCtx.startRendering();
+}
+
+// Play Audio
+async function playAudio(){
+  if(!originalBuffer) return;
+  if(semitones!==0 || !pitchedBuffer){
+    pitchedBuffer = await createPitchedBuffer(originalBuffer, semitones);
+  }
   if(bufferSource) bufferSource.disconnect();
-
   bufferSource = audioContext.createBufferSource();
-  bufferSource.buffer = audioBuffer;
+  bufferSource.buffer = pitchedBuffer;
 
-  // Audio-Chain: Buffer → Pitch → Effekte → Output
-  bufferSource.connect(pitchNode);
-  pitchNode.connect(dryGain); dryGain.connect(audioContext.destination);
-  pitchNode.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
-  pitchNode.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
+  // Audio-Chain: Buffer → Effekte → Output
+  bufferSource.connect(dryGain); dryGain.connect(audioContext.destination);
+  bufferSource.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
+  bufferSource.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(audioContext.destination);
 
   bufferSource.start();
 }
 
-// --- Stop ---
+// Stop
 document.getElementById("stopBtn").addEventListener("click", ()=>{
   if(bufferSource) bufferSource.stop();
 });
 
-// --- Pitch Buttons ---
-document.getElementById("pitchUp").addEventListener("click", ()=>{
+// Pitch Buttons
+document.getElementById("pitchUp").addEventListener("click", async ()=>{
   if(semitones<12) semitones++;
   pitchValueDiv.textContent = semitones;
-  if(pitchNode) pitchNode.parameters.get("semitones").value = semitones;
+  pitchedBuffer = null; // neu rendern
 });
-document.getElementById("pitchDown").addEventListener("click", ()=>{
+document.getElementById("pitchDown").addEventListener("click", async ()=>{
   if(semitones>-12) semitones--;
   pitchValueDiv.textContent = semitones;
-  if(pitchNode) pitchNode.parameters.get("semitones").value = semitones;
+  pitchedBuffer = null; // neu rendern
 });
 
-// --- Play Button ---
+// Play Button
 document.getElementById("playBtn").addEventListener("click", playAudio);
 
-// --- Effekte Mix ---
+// Effekte Mix
 function updateMix(){
   flangerWet.gain.value = parseFloat(document.getElementById("flangerControl").value);
   reverbWet.gain.value = parseFloat(document.getElementById("reverbControl").value);
@@ -172,7 +140,6 @@ function updateMix(){
 }
 document.getElementById("flangerControl").addEventListener("input",updateMix);
 document.getElementById("reverbControl").addEventListener("input",updateMix);
-
 </script>
 </body>
 </html>
