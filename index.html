@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>MP3 Player mit echten Semitone Pitch Shifter</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: white;
+  padding: 20px;
+}
+label { display: block; margin-top: 15px; }
+input[type="range"] { width: 300px; }
+button { margin: 5px; padding: 8px 16px; }
+#pitchShifterControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+#pitchValue {
+  font-size: 18px;
+  width: 50px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<h2>MP3 Player – Pitch Shift ±12 (ohne Tempo)</h2>
+
+<input type="file" id="fileInput" accept="audio/mp3">
+
+<div>
+  <button id="playBtn">Play</button>
+  <button id="stopBtn">Stop</button>
+
+  <label>
+    Pitch Slider (Speed & Pitch):
+    <input type="range" id="pitchControl" min="0.8" max="1.2" step="0.01" value="1">
+  </label>
+
+  <label>
+    Flanger (0–100%):
+    <input type="range" id="flangerControl" min="0" max="1" step="0.01" value="0">
+  </label>
+
+  <label>
+    Reverb (0–100%):
+    <input type="range" id="reverbControl" min="0" max="1" step="0.01" value="0">
+  </label>
+
+  <label>Pitch Shifter (Semitones):</label>
+  <div id="pitchShifterControls">
+    <button id="pitchDown">&lt;</button>
+    <div id="pitchValue">0</div>
+    <button id="pitchUp">&gt;</button>
+  </div>
+</div>
+
+<script>
+(async function() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  await audioContext.audioWorklet.addModule("pitch-shifter-processor.js");
+
+  let sourceNode, bufferNode;
+  let audioBuffer;
+
+  // Gains
+  let dryGain = audioContext.createGain();
+  dryGain.gain.value = 1;
+
+  let flangerDelay = audioContext.createDelay();
+  flangerDelay.delayTime.value = 0.003;
+  let flangerFeedback = audioContext.createGain();
+  flangerFeedback.gain.value = 0.8;
+  flangerDelay.connect(flangerFeedback);
+  flangerFeedback.connect(flangerDelay);
+  let flangerWet = audioContext.createGain();
+  flangerWet.gain.value = 0;
+  let lfo = audioContext.createOscillator();
+  let lfoGain = audioContext.createGain();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.3;
+  lfoGain.gain.value = 0.001;
+  lfo.connect(lfoGain);
+  lfoGain.connect(flangerDelay.delayTime);
+  lfo.start();
+
+  let convolver = audioContext.createConvolver();
+  let reverbWet = audioContext.createGain();
+  reverbWet.gain.value = 0;
+  function createImpulseResponse(duration = 2.5, decay = 3) {
+    let sampleRate = audioContext.sampleRate;
+    let length = sampleRate * duration;
+    let impulse = audioContext.createBuffer(2, length, sampleRate);
+    for (let c = 0; c < 2; c++) {
+      let channel = impulse.getChannelData(c);
+      for (let i = 0; i < length; i++) {
+        channel[i] = (Math.random()*2 - 1) * Math.pow(1 - i/length, decay);
+      }
+    }
+    return impulse;
+  }
+  convolver.buffer = createImpulseResponse();
+
+  document.getElementById("fileInput").addEventListener("change", function(e) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      audioContext.decodeAudioData(ev.target.result, buffer => audioBuffer = buffer);
+    };
+    reader.readAsArrayBuffer(e.target.files[0]);
+  });
+
+  let semitones = 0;
+  const pitchValueDiv = document.getElementById("pitchValue");
+
+  document.getElementById("playBtn").addEventListener("click", function() {
+    if (!audioBuffer) return;
+
+    if (sourceNode) sourceNode.stop();
+
+    bufferNode = audioContext.createBufferSource();
+    bufferNode.buffer = audioBuffer;
+    bufferNode.playbackRate.value = parseFloat(document.getElementById("pitchControl").value;
+
+    sourceNode = new AudioWorkletNode(audioContext, "pitch-shifter-processor");
+    sourceNode.parameters.get("semitones").value = semitones;
+
+    bufferNode.connect(sourceNode);
+    sourceNode.connect(dryGain);
+    dryGain.connect(audioContext.destination);
+
+    bufferNode.connect(flangerDelay);
+    flangerDelay.connect(flangerWet);
+    flangerWet.connect(audioContext.destination);
+
+    bufferNode.connect(convolver);
+    convolver.connect(reverbWet);
+    reverbWet.connect(audioContext.destination);
+
+    bufferNode.start();
+  });
+
+  document.getElementById("stopBtn").addEventListener("click", function() {
+    if (bufferNode) bufferNode.stop();
+  });
+
+  document.getElementById("pitchControl").addEventListener("input", function(e) {
+    if (bufferNode) bufferNode.playbackRate.value = parseFloat(e.target.value);
+  });
+
+  function updateMix() {
+    flangerWet.gain.value = parseFloat(document.getElementById("flangerControl").value);
+    reverbWet.gain.value = parseFloat(document.getElementById("reverbControl").value);
+    dryGain.gain.value = 1 - Math.max(flangerWet.gain.value, reverbWet.gain.value);
+  }
+  document.getElementById("flangerControl").addEventListener("input", updateMix);
+  document.getElementById("reverbControl").addEventListener("input", updateMix);
+
+  document.getElementById("pitchUp").addEventListener("click", function() {
+    if (semitones < 12) semitones++;
+    pitchValueDiv.textContent = semitones;
+    if (sourceNode) sourceNode.parameters.get("semitones").value = semitones;
+  });
+  document.getElementById("pitchDown").addEventListener("click", function() {
+    if (semitones > -12) semitones--;
+    pitchValueDiv.textContent = semitones;
+    if (sourceNode) sourceNode.parameters.get("semitones").value = semitones;
+  });
+})();
+</script>
+
+</body>
+</html>
