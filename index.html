@@ -51,7 +51,7 @@ let audioBuffer = null;
 let bufferSource = null;
 let pitchShifterNode = null;
 
-// Effekt-Gains
+// Effekte
 let dryGain = audioContext.createGain(); dryGain.gain.value = 1;
 
 let flangerDelay = audioContext.createDelay(); flangerDelay.delayTime.value = 0.003;
@@ -80,11 +80,14 @@ let semitones = 0;
 const pitchValueDiv = document.getElementById("pitchValue");
 
 // Worklet laden
-audioContext.audioWorklet.addModule(
-  "https://rawcdn.githack.com/100prolegit/Codi-Player/main/pitch-shifter-processor.js"
-).then(() => {
-  pitchShifterNode = new AudioWorkletNode(audioContext,"pitch-shifter-processor");
-});
+async function initPitchShifter() {
+  await audioContext.audioWorklet.addModule(
+    "https://rawcdn.githack.com/100prolegit/Codi-Player/main/pitch-shifter-processor.js"
+  );
+  pitchShifterNode = new AudioWorkletNode(audioContext, "pitch-shifter-processor");
+  pitchShifterNode.parameters.get("semitones").value = semitones;
+}
+initPitchShifter();
 
 // File Input
 document.getElementById("fileInput").addEventListener("change", function(e){
@@ -105,10 +108,9 @@ function playAudio(){
   bufferSource = audioContext.createBufferSource();
   bufferSource.buffer = audioBuffer;
 
-  // Pitch Slider Speed + Pitch
   bufferSource.playbackRate.value = parseFloat(document.getElementById("pitchControl").value);
 
-  // Chain: BufferSource → PitchShifter → Effekte → Output
+  // Audio-Chain: Buffer → PitchShifter → Effekte → Output
   bufferSource.connect(pitchShifterNode);
   pitchShifterNode.connect(dryGain); dryGain.connect(audioContext.destination);
   pitchShifterNode.connect(flangerDelay); flangerDelay.connect(flangerWet); flangerWet.connect(audioContext.destination);
@@ -139,12 +141,12 @@ document.getElementById("reverbControl").addEventListener("input",updateMix);
 
 // Pitch-Shifter Buttons
 document.getElementById("pitchUp").addEventListener("click", function(){
-  if(semitones<12) semitones++;
+  if(semitones < 12) semitones++;
   pitchValueDiv.textContent = semitones;
   if(pitchShifterNode) pitchShifterNode.parameters.get("semitones").value = semitones;
 });
 document.getElementById("pitchDown").addEventListener("click", function(){
-  if(semitones>-12) semitones--;
+  if(semitones > -12) semitones--;
   pitchValueDiv.textContent = semitones;
   if(pitchShifterNode) pitchShifterNode.parameters.get("semitones").value = semitones;
 });
