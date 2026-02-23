@@ -14,7 +14,7 @@ button { margin:5px; padding:8px 16px; }
 </head>
 <body>
 
-<h2>MP3 Player – Pitch + Flanger + Reverb + Pitch-Shifter ±12</h2>
+<h2>MP3 Player – Pitch, Flanger, Reverb + Pitch-Shifter ±12</h2>
 
 <input type="file" id="fileInput" accept="audio/mp3">
 
@@ -37,7 +37,7 @@ button { margin:5px; padding:8px 16px; }
     <input type="range" id="reverbControl" min="0" max="1" step="0.01" value="0">
   </label>
 
-  <label>Pitch Shifter (Semitones):</label>
+  <label>Pitch-Shifter (Semitones):</label>
   <div id="pitchShifterControls">
     <button id="pitchDown">&lt;</button>
     <div id="pitchValue">0</div>
@@ -75,7 +75,7 @@ function createImpulseResponse(duration=2.5, decay=3){
 }
 convolver.buffer = createImpulseResponse();
 
-// Pitch Shifter Semitones
+// Pitch-Shifter Semitones
 let semitones = 0;
 const pitchValueDiv = document.getElementById("pitchValue");
 
