@@ -48,6 +48,31 @@ body{
   min-width: 900px;
 }
 
+/* ✅ iPhone 12 mini (u.a.) Landscape Fix:
+   - Skaliert das gesamte Plugin proportional runter, sodass es in die Breite passt
+   - Desktop bleibt unverändert, Portrait bleibt wie gehabt */
+@media (max-width: 900px) and (orientation: landscape){
+  body{
+    overflow-x:hidden; /* kein horizontales Überlaufen mehr */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .plugin{
+    /* 900px ist dein “Desktop”-Design-Basiswert */
+    --fitScale: min(1, calc(100vw / 900));
+
+    width: 900px;
+    min-width: 900px;
+
+    transform: scale(var(--fitScale));
+    transform-origin: top center;
+
+    /* Optional: etwas Luft am Rand auf iOS */
+    padding: 10px;
+  }
+}
+
 /* PANEL */
 .panel{
   border-radius:14px;
