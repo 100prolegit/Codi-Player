@@ -48,31 +48,6 @@ body{
   min-width: 900px;
 }
 
-/* ✅ iPhone 12 mini (u.a.) Landscape Fix:
-   - Skaliert das gesamte Plugin proportional runter, sodass es in die Breite passt
-   - Desktop bleibt unverändert, Portrait bleibt wie gehabt */
-@media (max-width: 900px) and (orientation: landscape){
-  body{
-    overflow-x:hidden; /* kein horizontales Überlaufen mehr */
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-
-  .plugin{
-    /* 900px ist dein “Desktop”-Design-Basiswert */
-    --fitScale: min(1, calc(100vw / 900));
-
-    width: 900px;
-    min-width: 900px;
-
-    transform: scale(var(--fitScale));
-    transform-origin: top center;
-
-    /* Optional: etwas Luft am Rand auf iOS */
-    padding: 10px;
-  }
-}
-
 /* PANEL */
 .panel{
   border-radius:14px;
@@ -611,6 +586,67 @@ video{
   .bottomRow{ grid-template-columns: 280px 1fr !important; }
   .knobWrap{ height:240px !important; padding:0 !important; }
   .poweredBy{ right:16px !important; bottom:14px !important; }
+}
+
+/* =========================================================
+   ✅ iPhone 12 mini Landscape Fix (812×375)
+   Ziel: Nicht "zu groß" wirken, sondern sauber in 812px Breite passen,
+   ohne Desktop-Version zu verändern.
+========================================================= */
+@media (max-width: 812px) and (max-height: 375px) and (orientation: landscape){
+
+  /* Kein horizontaler Scroll in dieser speziellen Ansicht */
+  body{
+    overflow-x:hidden;
+    justify-content:center;
+  }
+
+  /* Plugin darf jetzt wirklich in die Viewport-Breite passen */
+  .plugin{
+    width:100vw;
+    max-width:812px;
+    min-width:0;
+    padding:8px;
+  }
+
+  /* Etwas kompakter, damit 375px Höhe passt */
+  .panel{
+    padding:10px;
+  }
+
+  .main{
+    grid-template-columns: 300px 1fr; /* vorher 330px */
+    gap:10px;
+  }
+
+  .bottomRow{
+    grid-template-columns: 240px 1fr; /* vorher 280px */
+    gap:10px;
+    margin-top:10px;
+  }
+
+  .module{ padding:8px; }
+  .ctrlCard{ padding:6px 4px; }
+
+  .logo img{ height:110px; } /* vorher 150px */
+
+  /* Controls-Höhen runter, damit nichts "quetscht" */
+  .slider-wrap{ height:200px; }  /* vorher 240px */
+  .knobWrap{ height:200px; }     /* vorher 240px */
+
+  /* Waveform niedriger in Landscape */
+  #waveCanvas{ height:220px; }   /* vorher 300px */
+
+  /* Playlist etwas niedriger */
+  .playlistList{ max-height:120px; } /* vorher 170px */
+
+  /* Powered by leicht kompakter positioniert */
+  .poweredBy{
+    right:12px;
+    bottom:10px;
+    transform: scale(0.95);
+    transform-origin: right bottom;
+  }
 }
 </style>
 </head>
