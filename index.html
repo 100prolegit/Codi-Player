@@ -18,10 +18,12 @@
   /* ✅ RAW GitHub Assets */
   --sliderThumbImg: url("https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/fht.png");
   --thumbSize: 52px;
+
+  /* ✅ only used by iPhone landscape fit */
+  --fitScale: 1;
 }
 
 *{ box-sizing:border-box; }
-
 html, body{ height:100%; }
 
 body{
@@ -31,8 +33,7 @@ body{
   display:flex;
   justify-content:center;
 
-  /* ✅ Mobile soll Desktop-Look behalten:
-     wenn Screen zu klein ist -> horizontal scroll statt Layout-Umbruch */
+  /* ✅ Desktop-Look auf Mobile: bei zu schmal -> horizontal scroll */
   overflow-x:auto;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -44,7 +45,7 @@ body{
   width:min(900px,100vw);
   padding:10px;
 
-  /* ✅ wenn sehr schmal: Plugin darf breiter sein als Viewport, damit Layout identisch bleibt */
+  /* ✅ Desktop-Look behalten */
   min-width: 900px;
 }
 
@@ -167,7 +168,7 @@ video{
   transform:rotate(-90deg);
   background:linear-gradient(to right,var(--purple) 0%,var(--purple) 0%,#ddd 0%,#ddd 100%);
   outline:none;
-  touch-action: none; /* ✅ wichtig auf mobile */
+  touch-action: none;
 }
 
 /* Thumb: PNG */
@@ -546,7 +547,7 @@ video{
   opacity:.9;
 }
 
-/* ✅ Powered by */
+/* Powered by */
 .poweredBy{
   position:absolute;
   right:16px;
@@ -578,7 +579,7 @@ video{
   -webkit-user-drag:none;
 }
 
-/* ✅ WICHTIG: responsive Umbrüche bewusst deaktiviert. */
+/* ✅ fallback override (wie vorher) */
 @media (max-width:760px){
   .main{ grid-template-columns:330px 1fr !important; }
   .triple{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
@@ -588,35 +589,30 @@ video{
 }
 
 /* =========================================================
-   ✅ iPhone 12 mini Landscape Fix (812×375)
-   Ziel: KEIN Scroll — alles innerhalb 375px Höhe sichtbar.
+   ✅ iPhone 12 mini Landscape (812×375) — alles sichtbar, ohne Scroll
+   Lösung: kompakter + automatische Mini-Skalierung per JS (Safari UI safe)
 ========================================================= */
 @media (max-width: 812px) and (max-height: 375px) and (orientation: landscape){
 
-  /* ✅ Kein Scroll in dieser Ansicht */
-  html, body{
-    height: 100%;
-  }
+  /* Kein Scroll — aber wir skalieren falls nötig */
   body{
-    overflow: hidden;      /* <- verhindert vertikal + horizontal scroll */
+    overflow:hidden;
     justify-content:center;
   }
 
-  /* Plugin passt in die Viewport-Breite */
+  /* Plugin in Viewport, dann per --fitScale skaliert */
   .plugin{
     width:100vw;
     max-width:812px;
     min-width:0;
     padding:6px;
+    transform: scale(var(--fitScale));
+    transform-origin: top center;
   }
 
-  /* Gesamtdichte höher (weniger Padding/Margins) */
-  .panel{
-    padding:8px;
-  }
+  .panel{ padding:8px; }
   .panel::after{ inset:8px; }
 
-  /* Layout etwas schmaler links/rechts */
   .main{
     grid-template-columns: 280px 1fr;
     gap:8px;
@@ -629,27 +625,19 @@ video{
 
   .module{ padding:6px; }
   .ctrlCard{ padding:5px 4px; }
-  .ctrl-label{
-    font-size:10px;
-    margin-bottom:4px;
-  }
+  .ctrl-label{ font-size:10px; margin-bottom:4px; }
 
-  /* Logo kleiner */
   .logo img{ height:78px; }
 
-  /* Controls deutlich niedriger */
   .slider-wrap{ height:150px; }
   .knobWrap{ height:150px; }
 
-  /* Knob kleiner */
   .knob{ width:56px; height:56px; }
   .knobTip{ top:24px; font-size:10px; padding:4px 7px; }
 
-  /* Slider kompakter */
   :root{ --thumbSize: 40px; }
   .vslider{ width:120px; height:8px; }
 
-  /* Player kompakter */
   .playerPanel{
     padding:8px;
     gap:7px;
@@ -665,44 +653,26 @@ video{
     height:34px;
     border-radius:10px;
   }
-  .nowPlaying{
-    font-size:12px;
-    min-height: 2.0em;
-  }
+  .nowPlaying{ font-size:12px; min-height: 2.0em; }
   .nowPlaying span{ font-size:11px; }
 
-  /* Playlist kürzer */
-  .playlistHeader{
-    padding:6px 8px;
-    font-size:11px;
-  }
+  .playlistHeader{ padding:6px 8px; font-size:11px; }
+
+  /* Wichtig: Playlist darf nicht scrollen, damit "alles sichtbar" */
   .playlistList{
-    max-height:72px; /* <- wichtig gegen Scroll */
+    max-height:72px;
+    overflow:hidden;
   }
-  .track{
-    padding:6px 8px;
-  }
+
+  .track{ padding:6px 8px; }
   .trackName{ font-size:11px; }
   .trackMeta{ font-size:10px; }
 
-  /* Waveform kompakter */
-  .wavePanel{
-    padding:8px;
-  }
-  .waveTop{
-    margin-bottom:6px;
-  }
-  #waveCanvas{
-    height:140px;   /* <- massiv reduziert */
-    border-radius:9px;
-  }
-  .waveHint{
-    margin-top:4px;
-    font-size:10px;
-    line-height:1.1;
-  }
+  .wavePanel{ padding:8px; }
+  .waveTop{ margin-bottom:6px; }
+  #waveCanvas{ height:140px; border-radius:9px; }
+  .waveHint{ margin-top:4px; font-size:10px; line-height:1.1; }
 
-  /* Powered by kleiner */
   .poweredBy{
     right:10px;
     bottom:8px;
@@ -712,7 +682,6 @@ video{
     border-radius:9px;
   }
 
-  /* Schrauben minimal kleiner, damit oben/unten nichts drückt */
   .screw{ width:14px; height:14px; }
   .screw::before{ width:9px; }
 }
@@ -720,7 +689,7 @@ video{
 </head>
 
 <body>
-<div class="plugin">
+<div class="plugin" id="pluginRoot">
   <div class="panel">
 
     <div class="poweredBy" aria-label="Powered by Onyos">
@@ -865,6 +834,55 @@ video{
 <script src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/js/rubberband-processor.js"></script>
 
 <script>
+/* =========================================================
+   ✅ iPhone 12 mini Landscape: Auto-Fit (Safari UI safe)
+   - Nur aktiv bei <=812×<=375 und landscape
+   - Skaliert minimal runter, bis alles sichtbar ist
+========================================================= */
+(function(){
+  const mq = window.matchMedia("(max-width: 812px) and (max-height: 375px) and (orientation: landscape)");
+  const root = document.documentElement;
+  const plugin = document.getElementById("pluginRoot");
+
+  function applyFit(){
+    if(!mq.matches || !plugin) {
+      root.style.setProperty("--fitScale", "1");
+      return;
+    }
+
+    // erst auf 1 setzen, dann messen
+    root.style.setProperty("--fitScale", "1");
+
+    // Safari braucht manchmal 1 Frame fürs Layout
+    requestAnimationFrame(() => {
+      const vh = window.innerHeight; // echte sichtbare Höhe (Safari UI berücksichtigt)
+      const rect = plugin.getBoundingClientRect();
+
+      // rect.height ist bereits inkl. padding/border, aber ohne Transform (weil scale=1)
+      const h = rect.height;
+
+      // kleiner Safety-Puffer für Safari (1–6px)
+      const safe = 6;
+
+      // Wenn zu hoch -> runterskalieren
+      let scale = (vh - safe) / h;
+
+      // Begrenzen: nicht größer als 1, nicht kleiner als 0.85 (damit es nicht winzig wird)
+      scale = Math.max(0.85, Math.min(1, scale));
+
+      root.style.setProperty("--fitScale", String(scale));
+    });
+  }
+
+  mq.addEventListener?.("change", applyFit);
+  window.addEventListener("resize", applyFit, { passive:true });
+  window.addEventListener("orientationchange", applyFit, { passive:true });
+  document.addEventListener("visibilitychange", applyFit, { passive:true });
+
+  // initial
+  applyFit();
+})();
+
 /* =========================================================
    0) Video + LEAN Scrub
 ========================================================= */
