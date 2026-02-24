@@ -15,10 +15,13 @@
   --edge:#cfcfe2;
   --shadow: rgba(0,0,0,.18);
 
-  /* Slider-Thumb PNG */
-  --sliderThumbImg: url("./fht.png");
+  /* ✅ RAW GitHub Assets (PNG/MP4) */
+  --assetBase: "https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets";
 
-  /* Thumb size */
+  /* ✅ Slider-Thumb PNG */
+  --sliderThumbImg: url("https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/fht.png");
+
+  /* ✅ Thumb size */
   --thumbSize: 52px;
 }
 
@@ -82,21 +85,9 @@ body{
   z-index:1;
 }
 
-.module{
-  border-radius:12px;
-  padding:10px;
-}
-
-.screen{
-  border-radius:10px;
-  overflow:hidden;
-  background:#000;
-}
-
-.stage{
-  width:100%;
-  position:relative;
-}
+.module{ border-radius:12px; padding:10px; }
+.screen{ border-radius:10px; overflow:hidden; background:#000; }
+.stage{ width:100%; position:relative; }
 
 video{
   width:100%;
@@ -120,7 +111,6 @@ video{
   -webkit-user-drag:none;
 }
 
-/* Kein Hintergrundblock hinter Controls */
 .controlPanel{
   width:100%;
   padding:0;
@@ -129,7 +119,6 @@ video{
   box-shadow:none;
 }
 
-/* Regler näher zusammen */
 .triple{
   display:grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -137,7 +126,6 @@ video{
   align-items:start;
 }
 
-/* Cards dürfen schrumpfen */
 .ctrlCard{
   min-width:0;
   border-radius:12px;
@@ -149,7 +137,6 @@ video{
   padding:8px 4px;
 }
 
-/* Label */
 .ctrl-label{
   text-align:center;
   font-size:11px;
@@ -168,7 +155,7 @@ video{
   position:relative;
 }
 
-/* RANGE: Track */
+/* Range: Track */
 .vslider{
   -webkit-appearance:none;
   appearance:none;
@@ -238,7 +225,7 @@ video{
   will-change: transform, top, left;
 }
 
-/* REVERB Knob Wrap */
+/* Knob */
 .knobWrap{
   height:240px;
   display:flex;
@@ -247,8 +234,6 @@ video{
   justify-content:center;
   position:relative;
 }
-
-/* KNOB BASE */
 .knob{
   width:74px;
   height:74px;
@@ -264,7 +249,6 @@ video{
 }
 .knob:active{ cursor:grabbing; }
 
-/* PNG als echtes IMG */
 .knobImg{
   width:100%;
   height:100%;
@@ -277,7 +261,6 @@ video{
   pointer-events:none;
 }
 
-/* Glanz-Overlay */
 .knob::after{
   content:"";
   position:absolute;
@@ -286,7 +269,6 @@ video{
   background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), rgba(255,255,255,0) 55%);
   pointer-events:none;
 }
-
 .knobTip{
   position:absolute;
   top:32px;
@@ -304,20 +286,12 @@ video{
   white-space:nowrap;
 }
 
-/* Schrauben */
-.screws{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  z-index:2;
-}
+/* Screws */
+.screws{ position:absolute; inset:0; pointer-events:none; z-index:2; }
 .screw{
   position:absolute;
-  width:16px;
-  height:16px;
-  border-radius:50%;
-  background:
-    radial-gradient(circle at 30% 30%, #ffffff 0%, #f0f0f6 28%, #cfcfe0 62%, #a8a8bf 100%);
+  width:16px; height:16px; border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f0f0f6 28%, #cfcfe0 62%, #a8a8bf 100%);
   box-shadow:
     inset 0 1px 2px rgba(255,255,255,.8),
     inset 0 -2px 3px rgba(0,0,0,.18),
@@ -327,10 +301,8 @@ video{
 .screw::before{
   content:"";
   position:absolute;
-  left:50%;
-  top:50%;
-  width:10px;
-  height:2px;
+  left:50%; top:50%;
+  width:10px; height:2px;
   border-radius:2px;
   transform:translate(-50%,-50%) rotate(var(--r, 22deg));
   background: linear-gradient(to right, rgba(0,0,0,.15), rgba(0,0,0,.55), rgba(0,0,0,.15));
@@ -356,7 +328,7 @@ video{
   z-index:1;
 }
 
-/* kleiner Musikplayer */
+/* Player */
 .playerPanel{
   border-radius:12px;
   background: var(--uiBg);
@@ -433,9 +405,7 @@ video{
   box-shadow:0 6px 12px rgba(0,0,0,.08);
 }
 .iconBtn:active{ transform: translateY(1px); }
-.iconBtn.play{
-  border-color: rgba(123,44,255,.35);
-}
+.iconBtn.play{ border-color: rgba(123,44,255,.35); }
 
 .playerVol{
   flex:1;
@@ -470,7 +440,6 @@ video{
   background:#fff;border:3px solid var(--purple);
 }
 
-/* Playlist */
 .playlist{
   border:1px solid rgba(0,0,0,.08);
   border-radius:10px;
@@ -529,7 +498,7 @@ video{
 
 .hiddenInput{ display:none; }
 
-/* Waveform Bereich */
+/* Waveform */
 .wavePanel{
   border-radius:12px;
   background: var(--uiBg);
@@ -540,7 +509,6 @@ video{
   padding:10px;
   position:relative;
 }
-
 .waveTop{
   display:flex;
   align-items:center;
@@ -548,30 +516,26 @@ video{
   gap:10px;
   margin-bottom:8px;
 }
-
 .waveTitle{
   font-size:11px;
   font-weight:900;
   letter-spacing:0.16em;
   color:var(--purple);
 }
-
 .waveMeta{
   font-size:12px;
   color:#4b4b59;
   font-weight:700;
   opacity:.9;
 }
-
 #waveCanvas{
   width:100%;
-  height:300px;
+  height:300px; /* ✅ 25% höher */
   display:block;
   border-radius:10px;
   background: linear-gradient(180deg, rgba(123,44,255,.06), rgba(0,0,0,.02));
   border:1px solid rgba(0,0,0,.06);
 }
-
 .waveHint{
   margin-top:6px;
   font-size:11px;
@@ -624,11 +588,14 @@ video{
 
     <div class="main">
 
-      <!-- VIDEO -->
+      <!-- VIDEO (ändere "video.mp4" falls dein Dateiname anders heißt) -->
       <div class="module">
         <div class="screen">
           <div class="stage">
-            <video id="video" src="video.mp4" playsinline muted preload="metadata"></video>
+            <video id="video"
+              src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/video.mp4"
+              playsinline muted preload="metadata">
+            </video>
           </div>
         </div>
       </div>
@@ -636,7 +603,7 @@ video{
       <!-- CONTROLS -->
       <div class="controls">
         <div class="logo">
-          <img src="logo.png" alt="Purple Player">
+          <img src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/logo.png" alt="Purple Player">
         </div>
 
         <div class="controlPanel">
@@ -651,23 +618,23 @@ video{
               </div>
             </div>
 
-            <!-- REVERB -->
+            <!-- REVERB -> Reverb Mix -->
             <div class="ctrlCard">
               <div class="ctrl-label">REVERB</div>
               <div class="knobWrap">
-                <div class="knobTip" id="tipReverb">50.0%</div>
+                <div class="knobTip" id="tipReverb">0.0%</div>
 
                 <input type="range" id="reverb" min="0" max="1" value="0.0" step="0.001"
                   style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
 
                 <div class="knob" id="reverb_ui" style="--a:-135deg" role="slider"
                   aria-label="Reverb" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" tabindex="0">
-                  <img class="knobImg" src="./knob.png" alt="">
+                  <img class="knobImg" src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/knob.png" alt="">
                 </div>
               </div>
             </div>
 
-            <!-- FLANGER -> Flanger mix -->
+            <!-- FLANGER -> Flanger Mix -->
             <div class="ctrlCard">
               <div class="ctrl-label">FLANGER</div>
               <div class="slider-wrap" id="wrapFlanger">
@@ -717,11 +684,9 @@ video{
           </div>
           <div class="playlistList" id="playlist"></div>
         </div>
-
-        <!-- Audio-Tag nicht mehr nötig (Engine spielt via WebAudio) -->
       </div>
 
-      <!-- Waveform Bereich -->
+      <!-- Waveform -->
       <div class="wavePanel">
         <div class="waveTop">
           <div class="waveTitle">WAVEFORM</div>
@@ -736,46 +701,58 @@ video{
   </div>
 </div>
 
-<!-- ✅ Sound Engine dependency (wie in deiner Engine-Datei) -->
-<script src="js/rubberband-processor.js"></script>
+<!-- ✅ Rubberband Processor (ändere den Pfad, falls deine Datei woanders liegt) -->
+<script src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/js/rubberband-processor.js"></script>
 
 <script>
 /* =========================================================
-   1) WEBAUDIO ENGINE (Rubberband + Flanger + Reverb)
-   basiert auf deinem Engine-Code :contentReference[oaicite:1]{index=1}
+   PURPLE PLAYER: UI -> Sound Engine Mapping
+   - LEAN slider => Pitch/Tempo
+   - REVERB knob => Reverb wet
+   - FLANGER slider => Flanger wet
 ========================================================= */
 
+/* ---------- Helpers ---------- */
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+/* ---------- WebAudio Core ---------- */
 const AC = window.AudioContext || window.webkitAudioContext;
 const audioContext = new AC();
 
 let audioBuffer = null;
-let bufferSource = null;
-let rubberbandProcessor = null;
+let sourceNode = null;
+let rubberband = null;
 
-let startTime = 0;
-let pauseOffset = 0;
+let startTime = 0;     // audioContext time when started
+let pauseOffset = 0;   // seconds into the track
 let isPlaying = false;
 
-/* Master + FX graph */
+/* Master */
 const masterGain = audioContext.createGain();
 masterGain.gain.value = 0.85;
 masterGain.connect(audioContext.destination);
 
+/* Dry */
 const dryGain = audioContext.createGain();
 dryGain.gain.value = 1.0;
+dryGain.connect(masterGain);
 
+/* Flanger */
 const flangerDelay = audioContext.createDelay();
-const flangerFeedback = audioContext.createGain();
-const flangerWet = audioContext.createGain();
-
 flangerDelay.delayTime.value = 0.003;
+
+const flangerFeedback = audioContext.createGain();
 flangerFeedback.gain.value = 0.7;
+
+const flangerWet = audioContext.createGain();
 flangerWet.gain.value = 0.0;
 
 flangerDelay.connect(flangerFeedback);
 flangerFeedback.connect(flangerDelay);
+flangerWet.connect(masterGain);
 
-/* LFO */
+/* LFO for flanger delay modulation */
 const lfo = audioContext.createOscillator();
 const lfoGain = audioContext.createGain();
 lfo.frequency.value = 0.3;
@@ -788,6 +765,7 @@ lfo.start();
 const convolver = audioContext.createConvolver();
 const reverbWet = audioContext.createGain();
 reverbWet.gain.value = 0.0;
+reverbWet.connect(masterGain);
 
 function createImpulseResponse(duration=2, decay=2.5){
   const rate = audioContext.sampleRate;
@@ -803,92 +781,103 @@ function createImpulseResponse(duration=2, decay=2.5){
 }
 convolver.buffer = createImpulseResponse();
 
-/* Connect FX to master */
-dryGain.connect(masterGain);
-flangerWet.connect(masterGain);
-reverbWet.connect(masterGain);
-
-/* Clean stop */
+/* ---------- Create/Stop Source ---------- */
 function stopSource(){
-  if(bufferSource){
-    try{ bufferSource.stop(); }catch{}
-    try{ bufferSource.disconnect(); }catch{}
-    bufferSource = null;
-  }
+  if(!sourceNode) return;
+  try{ sourceNode.onended = null; }catch{}
+  try{ sourceNode.stop(); }catch{}
+  try{ sourceNode.disconnect(); }catch{}
+  sourceNode = null;
+  rubberband = null;
 }
 
-/* Pitch mapping: LEAN 0..1 -> 0.55..1.0 */
+function routeSource(node){
+  // dry
+  node.connect(dryGain);
+
+  // flanger chain
+  node.connect(flangerDelay);
+  flangerDelay.connect(flangerWet);
+
+  // reverb chain
+  node.connect(convolver);
+  convolver.connect(reverbWet);
+}
+
+/* ---------- Pitch (LEAN) ---------- */
+/* Mapping: LEAN 0..1 => pitch 0.55..1.00 */
 function pToPitch(p01){
-  const p = Math.max(0, Math.min(1, p01));
+  const p = clamp01(p01);
   return 0.55 + 0.45 * p;
 }
+let currentPitch = 1.0;
 
-/* Apply pitch live */
-function setPitch(val){
-  const v = Math.max(0.55, Math.min(1.0, val));
-  if(isPlaying){
-    if(rubberbandProcessor && typeof rubberbandProcessor.setPitch === "function"){
-      rubberbandProcessor.setPitch(v);
-    }else if(bufferSource && bufferSource.playbackRate){
-      bufferSource.playbackRate.value = v;
-    }
+function setPitchLive(pitch){
+  const v = clamp(pitch, 0.55, 1.0);
+  currentPitch = v;
+
+  // Rubberband supports time-stretch pitch more cleanly (if your processor exposes it)
+  if(rubberband && typeof rubberband.setPitch === "function"){
+    rubberband.setPitch(v);
+    return;
+  }
+  // Fallback (not as good as rubberband, but works)
+  if(sourceNode && sourceNode.playbackRate){
+    sourceNode.playbackRate.value = v;
   }
 }
 
-/* Mix update */
-function setFlangerMix(v01){
-  flangerWet.gain.value = Math.max(0, Math.min(1, v01));
-}
-function setReverbMix(v01){
-  reverbWet.gain.value = Math.max(0, Math.min(1, v01));
-}
-function setMasterVol(v01){
-  const v = Math.max(0, Math.min(1, v01));
-  masterGain.gain.value = v;
+/* ---------- Start/Pause/Seek ---------- */
+async function ensureAudio(){
+  if(audioContext.state === "suspended"){
+    try{ await audioContext.resume(); }catch{}
+  }
 }
 
-/* Start/Pause with offset */
+function getCurrentTime(){
+  if(!audioBuffer) return 0;
+  if(isPlaying){
+    return clamp(audioContext.currentTime - startTime + pauseOffset, 0, audioBuffer.duration);
+  }
+  return clamp(pauseOffset, 0, audioBuffer.duration);
+}
+
 function startPlayback(){
   if(!audioBuffer) return;
 
   stopSource();
 
-  // (Re)create source
+  // Build source
   if(typeof RubberbandProcessor !== "undefined"){
-    rubberbandProcessor = new RubberbandProcessor(audioContext, audioBuffer);
-    rubberbandProcessor.setPitch(currentPitch);
-    bufferSource = rubberbandProcessor.getSource();
-  }else{
-    rubberbandProcessor = null;
-    bufferSource = audioContext.createBufferSource();
-    bufferSource.buffer = audioBuffer;
-    bufferSource.playbackRate.value = currentPitch;
+    // Expected API style from your engine: RubberbandProcessor(audioContext, audioBuffer)
+    rubberband = new RubberbandProcessor(audioContext, audioBuffer);
+    if(typeof rubberband.setPitch === "function") rubberband.setPitch(currentPitch);
+    sourceNode = (typeof rubberband.getSource === "function") ? rubberband.getSource() : null;
   }
 
-  // Route to graph (so wie in deiner Engine-Datei)
-  bufferSource.connect(dryGain);
+  if(!sourceNode){
+    rubberband = null;
+    sourceNode = audioContext.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.playbackRate.value = currentPitch;
+  }
 
-  bufferSource.connect(flangerDelay);
-  flangerDelay.connect(flangerWet);
-
-  bufferSource.connect(convolver);
-  convolver.connect(reverbWet);
+  routeSource(sourceNode);
 
   startTime = audioContext.currentTime;
-  bufferSource.start(0, pauseOffset);
-
+  sourceNode.start(0, pauseOffset);
   isPlaying = true;
 
-  bufferSource.onended = () => {
-    // Wenn es "natürlich" endet und nicht durch stop/pause:
+  sourceNode.onended = () => {
+    // if ended naturally
     if(isPlaying){
       isPlaying = false;
       pauseOffset = 0;
       btnPlay.textContent = "▶";
       // autoplay next
       if(tracks.length){
-        const i = (current + 1) % tracks.length;
-        loadTrack(i, true);
+        const next = (current + 1) % tracks.length;
+        loadTrack(next, true);
       }
     }
   };
@@ -896,110 +885,32 @@ function startPlayback(){
 
 function pausePlayback(){
   if(!isPlaying) return;
-  pauseOffset += (audioContext.currentTime - startTime);
+  pauseOffset = getCurrentTime();
   stopSource();
   isPlaying = false;
 }
 
-/* Seek: set pauseOffset + restart if playing */
 function seekTo(seconds){
   if(!audioBuffer) return;
-  const t = Math.max(0, Math.min(audioBuffer.duration, seconds));
-  pauseOffset = t;
-  if(isPlaying){
-    startPlayback();
-  }
+  pauseOffset = clamp(seconds, 0, audioBuffer.duration);
+  if(isPlaying) startPlayback();
 }
 
-/* Ensure AudioContext starts on user gesture */
-async function ensureAudio(){
-  if(audioContext.state === "suspended"){
-    try{ await audioContext.resume(); }catch{}
-  }
+/* ---------- FX Mix ---------- */
+function setFlangerMix(v01){
+  flangerWet.gain.value = clamp01(v01);
+}
+function setReverbMix(v01){
+  reverbWet.gain.value = clamp01(v01);
+}
+function setMasterVol(v01){
+  masterGain.gain.value = clamp01(v01);
 }
 
 /* =========================================================
-   2) UI CONTROLS -> ENGINE MAPPING
+   UI: Smooth Vertical Slider
 ========================================================= */
-
-const btnPlay = document.getElementById("btnPlay");
-const btnPrev = document.getElementById("btnPrev");
-const btnNext = document.getElementById("btnNext");
-const btnClear = document.getElementById("btnClear");
-const vol = document.getElementById("vol");
-
-let currentPitch = 1.0; // default
-
-function setVolUI(v){
-  const p = Math.max(0, Math.min(1, v));
-  vol.value = String(p);
-  vol.style.background = `linear-gradient(to right,var(--purple) ${p*100}%, #ddd ${p*100}%)`;
-  setMasterVol(p);
-}
-setVolUI(0.85);
-
-vol.addEventListener("input", () => setVolUI(Number(vol.value)), { passive:true });
-
-btnPlay.addEventListener("click", async () => {
-  await ensureAudio();
-  if(!audioBuffer && tracks.length) await loadTrack(0, true);
-  if(!audioBuffer) return;
-
-  if(!isPlaying){
-    startPlayback();
-    btnPlay.textContent = "❚❚";
-  }else{
-    pausePlayback();
-    btnPlay.textContent = "▶";
-  }
-});
-
-btnPrev.addEventListener("click", async () => {
-  if(!tracks.length) return;
-  await ensureAudio();
-  const i = current <= 0 ? tracks.length - 1 : current - 1;
-  await loadTrack(i, true);
-});
-
-btnNext.addEventListener("click", async () => {
-  if(!tracks.length) return;
-  await ensureAudio();
-  const i = (current + 1) % tracks.length;
-  await loadTrack(i, true);
-});
-
-btnClear.addEventListener("click", () => {
-  stopSource();
-  isPlaying = false;
-  audioBuffer = null;
-  pauseOffset = 0;
-  btnPlay.textContent = "▶";
-
-  for(const t of tracks){
-    try{ URL.revokeObjectURL(t.url); }catch{}
-  }
-  tracks = [];
-  current = -1;
-
-  nowPlayingEl.innerHTML = `<div>Keine Tracks geladen</div><span>Füge MP3/WAV/etc. hinzu</span>`;
-  renderPlaylist();
-  buildWaveformFromFile(null);
-});
-
-/* =========================================================
-   3) LEAN/FLANGER sliders + REVERB knob logic
-========================================================= */
-
-/* ---------- Smooth Vertical Slider Engine ---------- */
-function createSmoothVSlider({
-  sliderEl,
-  tooltipEl,
-  wrapEl,
-  maxValue,
-  uiSmooth = 0.22,
-  onValue
-}){
-  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+function createSmoothVSlider({ sliderEl, tooltipEl, wrapEl, maxValue, uiSmooth = 0.22, onValue }){
   let targetP = Number(sliderEl.value) / maxValue;
   let uiP = targetP;
 
@@ -1065,33 +976,25 @@ createSmoothVSlider({
   wrapEl: document.getElementById("wrapLean"),
   maxValue: 648,
   uiSmooth: 0.22,
-  onValue: (p) => {
-    // p: 0..1
-    const pitch = pToPitch(p);
-    currentPitch = pitch;
-    setPitch(pitch);
-  }
+  onValue: (p) => setPitchLive(pToPitch(p))
 });
 
-/* FLANGER -> mix 0..1 */
+/* FLANGER -> mix */
 createSmoothVSlider({
   sliderEl: document.getElementById("sliderFlanger"),
   tooltipEl: document.getElementById("tipFlanger"),
   wrapEl: document.getElementById("wrapFlanger"),
   maxValue: 1000,
   uiSmooth: 0.22,
-  onValue: (p) => {
-    setFlangerMix(p);
-  }
+  onValue: (p) => setFlangerMix(p)
 });
 
-/* REVERB Knob (wie vorher) + map to reverbWet */
+/* REVERB knob -> mix */
 (function initReverbKnob(){
   const input = document.getElementById("reverb");
   const ui = document.getElementById("reverb_ui");
   const tip = document.getElementById("tipReverb");
 
-  const clamp01 = (x) => Math.max(0, Math.min(1, x));
   let target = Number(input.value);
   let val = target;
   const SMOOTH = 0.25;
@@ -1102,7 +1005,6 @@ createSmoothVSlider({
     ui.setAttribute("aria-valuenow", String(v01));
     tip.textContent = (v01 * 100).toFixed(1) + "%";
   }
-
   function showTip(){ tip.style.opacity = 1; }
   function hideTip(){ tip.style.opacity = 0; }
 
@@ -1146,7 +1048,6 @@ createSmoothVSlider({
   ui.addEventListener("keydown", (e) => {
     const step = 0.02;
     if (!["ArrowLeft","ArrowDown","ArrowRight","ArrowUp"].includes(e.key)) return;
-
     let v = target;
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") v = clamp01(v - step);
     if (e.key === "ArrowRight" || e.key === "ArrowUp") v = clamp01(v + step);
@@ -1167,36 +1068,88 @@ createSmoothVSlider({
 })();
 
 /* =========================================================
-   4) PLAYLIST + FILE LOAD (decode to AudioBuffer)
+   PLAYER / PLAYLIST
 ========================================================= */
-
 const filePick = document.getElementById("filePick");
 const btnAdd = document.getElementById("btnAdd");
+const btnPlay = document.getElementById("btnPlay");
+const btnPrev = document.getElementById("btnPrev");
+const btnNext = document.getElementById("btnNext");
+const btnClear = document.getElementById("btnClear");
+const vol = document.getElementById("vol");
+
 const playlistEl = document.getElementById("playlist");
 const nowPlayingEl = document.getElementById("nowPlaying");
 
 let tracks = [];
 let current = -1;
 
-btnAdd.addEventListener("click", () => filePick.click());
+/* Volume */
+function setVolUI(v){
+  const p = clamp01(v);
+  vol.value = String(p);
+  vol.style.background = `linear-gradient(to right,var(--purple) ${p*100}%, #ddd ${p*100}%)`;
+  setMasterVol(p);
+}
+setVolUI(0.85);
+vol.addEventListener("input", () => setVolUI(Number(vol.value)), { passive:true });
 
-filePick.addEventListener("change", async (e) => {
+/* Upload */
+btnAdd.addEventListener("click", () => filePick.click());
+filePick.addEventListener("change", (e) => {
   const files = Array.from(e.target.files || []);
   if(!files.length) return;
-
   for(const f of files){
     const url = URL.createObjectURL(f);
     tracks.push({ name: f.name, url, file: f, dur: null });
   }
-
   renderPlaylist();
-
-  if(current === -1){
-    await ensureAudio();
-    await loadTrack(0, false);
-  }
-
+  if(current === -1) loadTrack(0, false);
   filePick.value = "";
+});
+
+/* Controls */
+btnPlay.addEventListener("click", async () => {
+  await ensureAudio();
+  if(current === -1 && tracks.length) await loadTrack(0, false);
+  if(!audioBuffer) return;
+
+  if(!isPlaying){
+    startPlayback();
+    btnPlay.textContent = "❚❚";
+  }else{
+    pausePlayback();
+    btnPlay.textContent = "▶";
+  }
+});
+
+btnPrev.addEventListener("click", async () => {
+  if(!tracks.length) return;
+  await ensureAudio();
+  const i = current <= 0 ? tracks.length - 1 : current - 1;
+  await loadTrack(i, true);
+});
+btnNext.addEventListener("click", async () => {
+  if(!tracks.length) return;
+  await ensureAudio();
+  const i = (current + 1) % tracks.length;
+  await loadTrack(i, true);
+});
+
+btnClear.addEventListener("click", () => {
+  stopSource();
+  isPlaying = false;
+  audioBuffer = null;
+  pauseOffset = 0;
+  btnPlay.textContent = "▶";
+
+  for(const t of tracks){ try{ URL.revokeObjectURL(t.url); }catch{} }
+  tracks = [];
+  current = -1;
+
+  nowPlayingEl.innerHTML = `<div>Keine Tracks geladen</div><span>Füge MP3/WAV/etc. hinzu</span>`;
+  renderPlaylist();
+  buildWaveformFromFile(null);
 });
 
 function fmtTime(sec){
@@ -1204,6 +1157,15 @@ function fmtTime(sec){
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2,"0")}`;
+}
+
+function updateNowPlaying(){
+  if(current < 0 || !tracks[current]){
+    nowPlayingEl.innerHTML = `<div>Keine Tracks geladen</div><span>Füge MP3/WAV/etc. hinzu</span>`;
+    return;
+  }
+  const dur = audioBuffer ? audioBuffer.duration : (tracks[current].dur || 0);
+  nowPlayingEl.innerHTML = `<div>${tracks[current].name}</div><span>${fmtTime(getCurrentTime())} / ${fmtTime(dur)}</span>`;
 }
 
 function renderPlaylist(){
@@ -1266,27 +1228,10 @@ function renderPlaylist(){
   });
 }
 
-function updateNowPlaying(){
-  if(current < 0 || !tracks[current]){
-    nowPlayingEl.innerHTML = `<div>Keine Tracks geladen</div><span>Füge MP3/WAV/etc. hinzu</span>`;
-    return;
-  }
-  const dur = audioBuffer ? audioBuffer.duration : tracks[current].dur;
-  nowPlayingEl.innerHTML = `<div>${tracks[current].name}</div><span>${fmtTime(getCurrentTime())} / ${fmtTime(dur)}</span>`;
-}
-
-function getCurrentTime(){
-  if(!audioBuffer) return 0;
-  if(isPlaying){
-    return Math.max(0, Math.min(audioBuffer.duration, (audioContext.currentTime - startTime + pauseOffset)));
-  }
-  return Math.max(0, Math.min(audioBuffer.duration, pauseOffset));
-}
-
 async function loadTrack(index, autoplay=false){
   if(index < 0 || index >= tracks.length) return;
 
-  // stop current
+  // stop old
   stopSource();
   isPlaying = false;
   pauseOffset = 0;
@@ -1294,15 +1239,15 @@ async function loadTrack(index, autoplay=false){
   current = index;
   renderPlaylist();
 
-  // decode
   const file = tracks[current].file;
+
   try{
+    await ensureAudio();
     const arr = await file.arrayBuffer();
     const buf = await audioContext.decodeAudioData(arr.slice(0));
     audioBuffer = buf;
     tracks[current].dur = buf.duration;
 
-    // build waveform
     await buildWaveformFromFile(file);
     waveMeta.textContent = `Track • ${buf.numberOfChannels}ch • ${buf.sampleRate} Hz • ${buf.duration.toFixed(2)}s`;
 
@@ -1326,7 +1271,7 @@ function removeTrack(index){
 
   const wasCurrent = (index === current);
   const removed = tracks.splice(index, 1)[0];
-  try{ URL.revokeObjectURL(removed.url); } catch {}
+  try{ URL.revokeObjectURL(removed.url); }catch{}
 
   if(!tracks.length){
     stopSource();
@@ -1353,9 +1298,8 @@ function removeTrack(index){
 }
 
 /* =========================================================
-   5) WAVEFORM (laufend) + Click-to-seek (restart engine)
+   WAVEFORM (laufend) + Click-to-seek
 ========================================================= */
-
 const waveCanvas = document.getElementById("waveCanvas");
 const waveMeta = document.getElementById("waveMeta");
 const wctx = waveCanvas.getContext("2d");
@@ -1372,7 +1316,7 @@ function fitCanvasToCSS(canvas){
   const cssH = Math.max(1, Math.floor(rect.height));
   canvas.width = Math.floor(cssW * dpr);
   canvas.height = Math.floor(cssH * dpr);
-  return { dpr, cssW, cssH };
+  return { dpr };
 }
 
 function drawWaveWindow(amps, centerProgress01){
@@ -1392,7 +1336,7 @@ function drawWaveWindow(amps, centerProgress01){
 
   const n = amps.length;
   const win = Math.max(80, Math.min(__waveWin, n));
-  const centerIdx = Math.floor(Math.max(0, Math.min(1, centerProgress01)) * (n - 1));
+  const centerIdx = Math.floor(clamp01(centerProgress01) * (n - 1));
   const start = Math.max(0, Math.min(n - win, centerIdx - Math.floor(win/2)));
 
   const sm = __waveSmooth;
@@ -1408,7 +1352,6 @@ function drawWaveWindow(amps, centerProgress01){
   for(let i=0;i<win;i++){
     const idx = start + i;
     const x = pad + i * stepX;
-
     const a0 = amps[idx] || 0;
     const a = prev * sm + a0 * (1 - sm);
     prev = a;
@@ -1420,6 +1363,7 @@ function drawWaveWindow(amps, centerProgress01){
   }
   wctx.stroke();
 
+  // midline
   wctx.strokeStyle = "rgba(0,0,0,0.10)";
   wctx.lineWidth = Math.max(1, 1 * dpr);
   wctx.beginPath();
@@ -1427,6 +1371,7 @@ function drawWaveWindow(amps, centerProgress01){
   wctx.lineTo(W - pad, mid);
   wctx.stroke();
 
+  // playhead fixed center
   const x = pad + (W - pad*2) * 0.5;
   wctx.strokeStyle = "rgba(29,29,34,0.65)";
   wctx.lineWidth = Math.max(1, 1.4 * dpr);
@@ -1445,8 +1390,6 @@ async function buildWaveformFromFile(file){
     }
 
     waveMeta.textContent = "Waveform wird analysiert…";
-
-    // decode once more for waveform (cheap enough, keeps engine clean)
     const arr = await file.arrayBuffer();
     const buf = await audioContext.decodeAudioData(arr.slice(0));
 
@@ -1481,7 +1424,7 @@ async function buildWaveformFromFile(file){
   }
 }
 
-/* laufend zeichnen */
+/* draw loop */
 function rafWave(){
   if(__waveAmps && audioBuffer && audioBuffer.duration){
     const p = getCurrentTime() / audioBuffer.duration;
@@ -1494,7 +1437,7 @@ function rafWave(){
 }
 requestAnimationFrame(rafWave);
 
-/* Click-to-seek: relative zum center (wie bei dir) */
+/* click-to-seek */
 waveCanvas.addEventListener("pointerdown", async (e) => {
   if(!audioBuffer || !__waveAmps) return;
   await ensureAudio();
@@ -1502,8 +1445,7 @@ waveCanvas.addEventListener("pointerdown", async (e) => {
   const rect = waveCanvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width;
   const delta = (x - 0.5) * audioBuffer.duration;
-
-  const newTime = Math.max(0, Math.min(audioBuffer.duration, getCurrentTime() + delta));
+  const newTime = clamp(getCurrentTime() + delta, 0, audioBuffer.duration);
   seekTo(newTime);
 });
 
