@@ -578,8 +578,7 @@ video{
   -webkit-user-drag:none;
 }
 
-/* ✅ WICHTIG: responsive Umbrüche bewusst deaktiviert.
-   (Du kannst das komplett weglassen — ist hier nur als "Override" falls irgendwo was reinrutscht) */
+/* ✅ WICHTIG: responsive Umbrüche bewusst deaktiviert. */
 @media (max-width:760px){
   .main{ grid-template-columns:330px 1fr !important; }
   .triple{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
@@ -590,63 +589,132 @@ video{
 
 /* =========================================================
    ✅ iPhone 12 mini Landscape Fix (812×375)
-   Ziel: Nicht "zu groß" wirken, sondern sauber in 812px Breite passen,
-   ohne Desktop-Version zu verändern.
+   Ziel: KEIN Scroll — alles innerhalb 375px Höhe sichtbar.
 ========================================================= */
 @media (max-width: 812px) and (max-height: 375px) and (orientation: landscape){
 
-  /* Kein horizontaler Scroll in dieser speziellen Ansicht */
+  /* ✅ Kein Scroll in dieser Ansicht */
+  html, body{
+    height: 100%;
+  }
   body{
-    overflow-x:hidden;
+    overflow: hidden;      /* <- verhindert vertikal + horizontal scroll */
     justify-content:center;
   }
 
-  /* Plugin darf jetzt wirklich in die Viewport-Breite passen */
+  /* Plugin passt in die Viewport-Breite */
   .plugin{
     width:100vw;
     max-width:812px;
     min-width:0;
+    padding:6px;
+  }
+
+  /* Gesamtdichte höher (weniger Padding/Margins) */
+  .panel{
     padding:8px;
   }
+  .panel::after{ inset:8px; }
 
-  /* Etwas kompakter, damit 375px Höhe passt */
-  .panel{
-    padding:10px;
-  }
-
+  /* Layout etwas schmaler links/rechts */
   .main{
-    grid-template-columns: 300px 1fr; /* vorher 330px */
-    gap:10px;
+    grid-template-columns: 280px 1fr;
+    gap:8px;
   }
-
   .bottomRow{
-    grid-template-columns: 240px 1fr; /* vorher 280px */
-    gap:10px;
-    margin-top:10px;
+    grid-template-columns: 230px 1fr;
+    gap:8px;
+    margin-top:8px;
   }
 
-  .module{ padding:8px; }
-  .ctrlCard{ padding:6px 4px; }
+  .module{ padding:6px; }
+  .ctrlCard{ padding:5px 4px; }
+  .ctrl-label{
+    font-size:10px;
+    margin-bottom:4px;
+  }
 
-  .logo img{ height:110px; } /* vorher 150px */
+  /* Logo kleiner */
+  .logo img{ height:78px; }
 
-  /* Controls-Höhen runter, damit nichts "quetscht" */
-  .slider-wrap{ height:200px; }  /* vorher 240px */
-  .knobWrap{ height:200px; }     /* vorher 240px */
+  /* Controls deutlich niedriger */
+  .slider-wrap{ height:150px; }
+  .knobWrap{ height:150px; }
 
-  /* Waveform niedriger in Landscape */
-  #waveCanvas{ height:220px; }   /* vorher 300px */
+  /* Knob kleiner */
+  .knob{ width:56px; height:56px; }
+  .knobTip{ top:24px; font-size:10px; padding:4px 7px; }
 
-  /* Playlist etwas niedriger */
-  .playlistList{ max-height:120px; } /* vorher 170px */
+  /* Slider kompakter */
+  :root{ --thumbSize: 40px; }
+  .vslider{ width:120px; height:8px; }
 
-  /* Powered by leicht kompakter positioniert */
+  /* Player kompakter */
+  .playerPanel{
+    padding:8px;
+    gap:7px;
+    min-height: 0;
+  }
+  .smallBtn{
+    padding:6px 8px;
+    border-radius:9px;
+    font-size:12px;
+  }
+  .iconBtn{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+  }
+  .nowPlaying{
+    font-size:12px;
+    min-height: 2.0em;
+  }
+  .nowPlaying span{ font-size:11px; }
+
+  /* Playlist kürzer */
+  .playlistHeader{
+    padding:6px 8px;
+    font-size:11px;
+  }
+  .playlistList{
+    max-height:72px; /* <- wichtig gegen Scroll */
+  }
+  .track{
+    padding:6px 8px;
+  }
+  .trackName{ font-size:11px; }
+  .trackMeta{ font-size:10px; }
+
+  /* Waveform kompakter */
+  .wavePanel{
+    padding:8px;
+  }
+  .waveTop{
+    margin-bottom:6px;
+  }
+  #waveCanvas{
+    height:140px;   /* <- massiv reduziert */
+    border-radius:9px;
+  }
+  .waveHint{
+    margin-top:4px;
+    font-size:10px;
+    line-height:1.1;
+  }
+
+  /* Powered by kleiner */
   .poweredBy{
-    right:12px;
-    bottom:10px;
-    transform: scale(0.95);
+    right:10px;
+    bottom:8px;
+    transform: scale(0.88);
     transform-origin: right bottom;
+    padding:5px 7px;
+    border-radius:9px;
   }
+
+  /* Schrauben minimal kleiner, damit oben/unten nichts drückt */
+  .screw{ width:14px; height:14px; }
+  .screw::before{ width:9px; }
 }
 </style>
 </head>
@@ -1019,11 +1087,7 @@ function createSmoothVSlider({ sliderEl, tooltipEl, wrapEl, maxValue, uiSmooth =
 
   function updateGradient(p){
     const p100 = p * 100;
-    sliderEl.style.background = `linear-gradient(to right,
-      var(--purple) 0%,
-      var(--purple) ${p100}%,
-      #ddd ${p100}%,
-      #ddd 100%)`;
+    sliderEl.style.background = `linear-gradient(to right,var(--purple) 0%,var(--purple) ${p100}%,#ddd ${p100}%,#ddd 100%)`;
   }
 
   function updateTooltip(p){
