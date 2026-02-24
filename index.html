@@ -15,13 +15,8 @@
   --edge:#cfcfe2;
   --shadow: rgba(0,0,0,.18);
 
-  /* ✅ RAW GitHub Assets (PNG/MP4) */
-  --assetBase: "https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets";
-
-  /* ✅ Slider-Thumb PNG */
+  /* ✅ RAW GitHub Assets */
   --sliderThumbImg: url("https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/fht.png");
-
-  /* ✅ Thumb size */
   --thumbSize: 52px;
 }
 
@@ -111,13 +106,7 @@ video{
   -webkit-user-drag:none;
 }
 
-.controlPanel{
-  width:100%;
-  padding:0;
-  background:transparent;
-  border:none;
-  box-shadow:none;
-}
+.controlPanel{ width:100%; padding:0; background:transparent; border:none; box-shadow:none; }
 
 .triple{
   display:grid;
@@ -260,7 +249,6 @@ video{
   -webkit-user-drag:none;
   pointer-events:none;
 }
-
 .knob::after{
   content:"";
   position:absolute;
@@ -588,7 +576,7 @@ video{
 
     <div class="main">
 
-      <!-- VIDEO (ändere "video.mp4" falls dein Dateiname anders heißt) -->
+      <!-- VIDEO (passt Dateiname an, wenn er anders heißt) -->
       <div class="module">
         <div class="screen">
           <div class="stage">
@@ -609,7 +597,7 @@ video{
         <div class="controlPanel">
           <div class="triple">
 
-            <!-- LEAN -> Pitch/Tempo -->
+            <!-- LEAN -> Pitch/Tempo + MP4 scrub -->
             <div class="ctrlCard">
               <div class="ctrl-label">LEAN</div>
               <div class="slider-wrap" id="wrapLean">
@@ -618,15 +606,13 @@ video{
               </div>
             </div>
 
-            <!-- REVERB -> Reverb Mix -->
+            <!-- REVERB -->
             <div class="ctrlCard">
               <div class="ctrl-label">REVERB</div>
               <div class="knobWrap">
                 <div class="knobTip" id="tipReverb">0.0%</div>
-
                 <input type="range" id="reverb" min="0" max="1" value="0.0" step="0.001"
                   style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
-
                 <div class="knob" id="reverb_ui" style="--a:-135deg" role="slider"
                   aria-label="Reverb" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" tabindex="0">
                   <img class="knobImg" src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/knob.png" alt="">
@@ -634,7 +620,7 @@ video{
               </div>
             </div>
 
-            <!-- FLANGER -> Flanger Mix -->
+            <!-- FLANGER -->
             <div class="ctrlCard">
               <div class="ctrl-label">FLANGER</div>
               <div class="slider-wrap" id="wrapFlanger">
@@ -653,7 +639,6 @@ video{
     <!-- Player + Waveform -->
     <div class="bottomRow">
 
-      <!-- Musikplayer -->
       <div class="playerPanel">
         <div class="playerTop">
           <div class="playerTitle">MUSIC PLAYER</div>
@@ -686,7 +671,6 @@ video{
         </div>
       </div>
 
-      <!-- Waveform -->
       <div class="wavePanel">
         <div class="waveTop">
           <div class="waveTitle">WAVEFORM</div>
@@ -701,22 +685,52 @@ video{
   </div>
 </div>
 
-<!-- ✅ Rubberband Processor (ändere den Pfad, falls deine Datei woanders liegt) -->
+<!-- Rubberband processor (falls der Pfad anders ist, anpassen) -->
 <script src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/js/rubberband-processor.js"></script>
 
 <script>
 /* =========================================================
-   PURPLE PLAYER: UI -> Sound Engine Mapping
-   - LEAN slider => Pitch/Tempo
-   - REVERB knob => Reverb wet
-   - FLANGER slider => Flanger wet
+   0) Video + LEAN Scrub (zusammen mit Pitch/Tempo)
 ========================================================= */
+const video = document.getElementById("video");
+let videoDuration = 0;
 
-/* ---------- Helpers ---------- */
+/* WICHTIG: Für Scrubbing muss der Browser Duration kennen */
+video.addEventListener("loadedmetadata", () => {
+  videoDuration = video.duration || 0;
+});
+
+/* Optional: iOS/Safari braucht manchmal play/pause um Frames zu aktualisieren */
+function scrubVideoTo(p01){
+  if(!videoDuration) return;
+
+  const p = Math.max(0, Math.min(1, p01));
+
+  // du hattest früher maxFillPoint=0.648, falls du das willst:
+  const maxFillPoint = 0.648;
+
+  const t = p * videoDuration * maxFillPoint;
+
+  // Throttle auf ~30fps damit es nicht hackt
+  const now = performance.now() / 1000;
+  const FPS = 30;
+  const MIN_DT = 1 / FPS;
+  if(now - (window.__lastVideoSet || 0) < MIN_DT) return;
+
+  // nur setzen wenn es sich wirklich ändert
+  if(Math.abs((window.__lastVideoTime||0) - t) > 0.004){
+    video.currentTime = t;
+    window.__lastVideoTime = t;
+  }
+  window.__lastVideoSet = now;
+}
+
+/* =========================================================
+   1) WEBAUDIO ENGINE
+========================================================= */
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
-/* ---------- WebAudio Core ---------- */
 const AC = window.AudioContext || window.webkitAudioContext;
 const audioContext = new AC();
 
@@ -724,8 +738,8 @@ let audioBuffer = null;
 let sourceNode = null;
 let rubberband = null;
 
-let startTime = 0;     // audioContext time when started
-let pauseOffset = 0;   // seconds into the track
+let startTime = 0;
+let pauseOffset = 0;
 let isPlaying = false;
 
 /* Master */
@@ -747,12 +761,12 @@ flangerFeedback.gain.value = 0.7;
 
 const flangerWet = audioContext.createGain();
 flangerWet.gain.value = 0.0;
+flangerWet.connect(masterGain);
 
 flangerDelay.connect(flangerFeedback);
 flangerFeedback.connect(flangerDelay);
-flangerWet.connect(masterGain);
 
-/* LFO for flanger delay modulation */
+/* LFO */
 const lfo = audioContext.createOscillator();
 const lfoGain = audioContext.createGain();
 lfo.frequency.value = 0.3;
@@ -781,7 +795,6 @@ function createImpulseResponse(duration=2, decay=2.5){
 }
 convolver.buffer = createImpulseResponse();
 
-/* ---------- Create/Stop Source ---------- */
 function stopSource(){
   if(!sourceNode) return;
   try{ sourceNode.onended = null; }catch{}
@@ -792,20 +805,16 @@ function stopSource(){
 }
 
 function routeSource(node){
-  // dry
   node.connect(dryGain);
 
-  // flanger chain
   node.connect(flangerDelay);
   flangerDelay.connect(flangerWet);
 
-  // reverb chain
   node.connect(convolver);
   convolver.connect(reverbWet);
 }
 
-/* ---------- Pitch (LEAN) ---------- */
-/* Mapping: LEAN 0..1 => pitch 0.55..1.00 */
+/* Pitch: LEAN 0..1 => 0.55..1.00 */
 function pToPitch(p01){
   const p = clamp01(p01);
   return 0.55 + 0.45 * p;
@@ -816,18 +825,15 @@ function setPitchLive(pitch){
   const v = clamp(pitch, 0.55, 1.0);
   currentPitch = v;
 
-  // Rubberband supports time-stretch pitch more cleanly (if your processor exposes it)
   if(rubberband && typeof rubberband.setPitch === "function"){
     rubberband.setPitch(v);
     return;
   }
-  // Fallback (not as good as rubberband, but works)
   if(sourceNode && sourceNode.playbackRate){
     sourceNode.playbackRate.value = v;
   }
 }
 
-/* ---------- Start/Pause/Seek ---------- */
 async function ensureAudio(){
   if(audioContext.state === "suspended"){
     try{ await audioContext.resume(); }catch{}
@@ -847,9 +853,7 @@ function startPlayback(){
 
   stopSource();
 
-  // Build source
   if(typeof RubberbandProcessor !== "undefined"){
-    // Expected API style from your engine: RubberbandProcessor(audioContext, audioBuffer)
     rubberband = new RubberbandProcessor(audioContext, audioBuffer);
     if(typeof rubberband.setPitch === "function") rubberband.setPitch(currentPitch);
     sourceNode = (typeof rubberband.getSource === "function") ? rubberband.getSource() : null;
@@ -869,12 +873,10 @@ function startPlayback(){
   isPlaying = true;
 
   sourceNode.onended = () => {
-    // if ended naturally
     if(isPlaying){
       isPlaying = false;
       pauseOffset = 0;
       btnPlay.textContent = "▶";
-      // autoplay next
       if(tracks.length){
         const next = (current + 1) % tracks.length;
         loadTrack(next, true);
@@ -896,19 +898,13 @@ function seekTo(seconds){
   if(isPlaying) startPlayback();
 }
 
-/* ---------- FX Mix ---------- */
-function setFlangerMix(v01){
-  flangerWet.gain.value = clamp01(v01);
-}
-function setReverbMix(v01){
-  reverbWet.gain.value = clamp01(v01);
-}
-function setMasterVol(v01){
-  masterGain.gain.value = clamp01(v01);
-}
+/* FX mix */
+function setFlangerMix(v01){ flangerWet.gain.value = clamp01(v01); }
+function setReverbMix(v01){ reverbWet.gain.value = clamp01(v01); }
+function setMasterVol(v01){ masterGain.gain.value = clamp01(v01); }
 
 /* =========================================================
-   UI: Smooth Vertical Slider
+   2) Smooth Vertical Slider Engine
 ========================================================= */
 function createSmoothVSlider({ sliderEl, tooltipEl, wrapEl, maxValue, uiSmooth = 0.22, onValue }){
   let targetP = Number(sliderEl.value) / maxValue;
@@ -969,17 +965,22 @@ function createSmoothVSlider({ sliderEl, tooltipEl, wrapEl, maxValue, uiSmooth =
   requestAnimationFrame(tick);
 }
 
-/* LEAN -> Pitch */
+/* ✅ LEAN: steuert Pitch + MP4 Scrub gleichzeitig */
 createSmoothVSlider({
   sliderEl: document.getElementById("sliderLean"),
   tooltipEl: document.getElementById("tipLean"),
   wrapEl: document.getElementById("wrapLean"),
   maxValue: 648,
   uiSmooth: 0.22,
-  onValue: (p) => setPitchLive(pToPitch(p))
+  onValue: (p) => {
+    // Audio pitch/tempo
+    setPitchLive(pToPitch(p));
+    // Video scrub
+    scrubVideoTo(p);
+  }
 });
 
-/* FLANGER -> mix */
+/* FLANGER: mix */
 createSmoothVSlider({
   sliderEl: document.getElementById("sliderFlanger"),
   tooltipEl: document.getElementById("tipFlanger"),
@@ -989,7 +990,7 @@ createSmoothVSlider({
   onValue: (p) => setFlangerMix(p)
 });
 
-/* REVERB knob -> mix */
+/* REVERB knob */
 (function initReverbKnob(){
   const input = document.getElementById("reverb");
   const ui = document.getElementById("reverb_ui");
@@ -1068,7 +1069,7 @@ createSmoothVSlider({
 })();
 
 /* =========================================================
-   PLAYER / PLAYLIST
+   3) Player / Playlist
 ========================================================= */
 const filePick = document.getElementById("filePick");
 const btnAdd = document.getElementById("btnAdd");
@@ -1084,7 +1085,6 @@ const nowPlayingEl = document.getElementById("nowPlaying");
 let tracks = [];
 let current = -1;
 
-/* Volume */
 function setVolUI(v){
   const p = clamp01(v);
   vol.value = String(p);
@@ -1094,8 +1094,8 @@ function setVolUI(v){
 setVolUI(0.85);
 vol.addEventListener("input", () => setVolUI(Number(vol.value)), { passive:true });
 
-/* Upload */
 btnAdd.addEventListener("click", () => filePick.click());
+
 filePick.addEventListener("change", (e) => {
   const files = Array.from(e.target.files || []);
   if(!files.length) return;
@@ -1108,9 +1108,11 @@ filePick.addEventListener("change", (e) => {
   filePick.value = "";
 });
 
-/* Controls */
 btnPlay.addEventListener("click", async () => {
   await ensureAudio();
+  // ensure video can show current frame on some browsers
+  try{ video.pause(); }catch{}
+
   if(current === -1 && tracks.length) await loadTrack(0, false);
   if(!audioBuffer) return;
 
@@ -1231,7 +1233,6 @@ function renderPlaylist(){
 async function loadTrack(index, autoplay=false){
   if(index < 0 || index >= tracks.length) return;
 
-  // stop old
   stopSource();
   isPlaying = false;
   pauseOffset = 0;
@@ -1250,7 +1251,6 @@ async function loadTrack(index, autoplay=false){
 
     await buildWaveformFromFile(file);
     waveMeta.textContent = `Track • ${buf.numberOfChannels}ch • ${buf.sampleRate} Hz • ${buf.duration.toFixed(2)}s`;
-
     updateNowPlaying();
 
     if(autoplay){
@@ -1298,7 +1298,7 @@ function removeTrack(index){
 }
 
 /* =========================================================
-   WAVEFORM (laufend) + Click-to-seek
+   4) Waveform
 ========================================================= */
 const waveCanvas = document.getElementById("waveCanvas");
 const waveMeta = document.getElementById("waveMeta");
@@ -1312,10 +1312,8 @@ let __waveSmooth = 0.65;
 function fitCanvasToCSS(canvas){
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   const rect = canvas.getBoundingClientRect();
-  const cssW = Math.max(1, Math.floor(rect.width));
-  const cssH = Math.max(1, Math.floor(rect.height));
-  canvas.width = Math.floor(cssW * dpr);
-  canvas.height = Math.floor(cssH * dpr);
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
   return { dpr };
 }
 
@@ -1363,7 +1361,6 @@ function drawWaveWindow(amps, centerProgress01){
   }
   wctx.stroke();
 
-  // midline
   wctx.strokeStyle = "rgba(0,0,0,0.10)";
   wctx.lineWidth = Math.max(1, 1 * dpr);
   wctx.beginPath();
@@ -1371,7 +1368,6 @@ function drawWaveWindow(amps, centerProgress01){
   wctx.lineTo(W - pad, mid);
   wctx.stroke();
 
-  // playhead fixed center
   const x = pad + (W - pad*2) * 0.5;
   wctx.strokeStyle = "rgba(29,29,34,0.65)";
   wctx.lineWidth = Math.max(1, 1.4 * dpr);
@@ -1437,16 +1433,14 @@ function rafWave(){
 }
 requestAnimationFrame(rafWave);
 
-/* click-to-seek */
+/* click-to-seek relative to center */
 waveCanvas.addEventListener("pointerdown", async (e) => {
   if(!audioBuffer || !__waveAmps) return;
   await ensureAudio();
-
   const rect = waveCanvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width;
   const delta = (x - 0.5) * audioBuffer.duration;
-  const newTime = clamp(getCurrentTime() + delta, 0, audioBuffer.duration);
-  seekTo(newTime);
+  seekTo(clamp(getCurrentTime() + delta, 0, audioBuffer.duration));
 });
 
 window.addEventListener("resize", () => {
