@@ -532,11 +532,44 @@ video{
   opacity:.9;
 }
 
+/* ✅ Powered by (unten rechts, ohne Layout zu vergrößern) */
+.poweredBy{
+  position:absolute;
+  right:16px;
+  bottom:14px;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 8px;
+  border-radius:10px;
+  background:rgba(255,255,255,.78);
+  border:1px solid rgba(0,0,0,.06);
+  box-shadow:0 8px 16px rgba(0,0,0,.10);
+  backdrop-filter: blur(6px);
+}
+.poweredBy span{
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:0.14em;
+  color:#4b4b59;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.poweredBy img{
+  height:18px;
+  width:auto;
+  display:block;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
 @media (max-width:760px){
   .main{ grid-template-columns:1fr; }
   .triple{ grid-template-columns:1fr; gap:10px; }
   .knobWrap{ height:auto; padding:18px 0; }
   .bottomRow{ grid-template-columns:1fr; }
+  .poweredBy{ right:12px; bottom:12px; }
 }
 </style>
 </head>
@@ -544,6 +577,13 @@ video{
 <body>
 <div class="plugin">
   <div class="panel">
+
+    <!-- ✅ Powered by Onyos (overlay, nimmt keinen extra Platz weg) -->
+    <div class="poweredBy" aria-label="Powered by Onyos">
+      <span>POWERED BY</span>
+      <!-- falls dein Dateiname anders ist: onyos.png -> passe an -->
+      <img src="https://raw.githubusercontent.com/100prolegit/Codi-Player/main/Assets/onyos.png" alt="Onyos">
+    </div>
 
     <div class="screws" aria-hidden="true">
       <div class="screw" style="left:10px; top:10px; --r:18deg;"></div>
@@ -576,7 +616,7 @@ video{
 
     <div class="main">
 
-      <!-- VIDEO (passt Dateiname an, wenn er anders heißt) -->
+      <!-- VIDEO -->
       <div class="module">
         <div class="screen">
           <div class="stage">
@@ -690,34 +730,26 @@ video{
 
 <script>
 /* =========================================================
-   0) Video + LEAN Scrub (zusammen mit Pitch/Tempo)
+   0) Video + LEAN Scrub
 ========================================================= */
 const video = document.getElementById("video");
 let videoDuration = 0;
 
-/* WICHTIG: Für Scrubbing muss der Browser Duration kennen */
 video.addEventListener("loadedmetadata", () => {
   videoDuration = video.duration || 0;
 });
 
-/* Optional: iOS/Safari braucht manchmal play/pause um Frames zu aktualisieren */
 function scrubVideoTo(p01){
   if(!videoDuration) return;
-
   const p = Math.max(0, Math.min(1, p01));
-
-  // du hattest früher maxFillPoint=0.648, falls du das willst:
   const maxFillPoint = 0.648;
-
   const t = p * videoDuration * maxFillPoint;
 
-  // Throttle auf ~30fps damit es nicht hackt
   const now = performance.now() / 1000;
   const FPS = 30;
   const MIN_DT = 1 / FPS;
   if(now - (window.__lastVideoSet || 0) < MIN_DT) return;
 
-  // nur setzen wenn es sich wirklich ändert
   if(Math.abs((window.__lastVideoTime||0) - t) > 0.004){
     video.currentTime = t;
     window.__lastVideoTime = t;
@@ -806,15 +838,13 @@ function stopSource(){
 
 function routeSource(node){
   node.connect(dryGain);
-
   node.connect(flangerDelay);
   flangerDelay.connect(flangerWet);
-
   node.connect(convolver);
   convolver.connect(reverbWet);
 }
 
-/* Pitch: LEAN 0..1 => 0.55..1.00 */
+/* Pitch */
 function pToPitch(p01){
   const p = clamp01(p01);
   return 0.55 + 0.45 * p;
@@ -904,7 +934,7 @@ function setReverbMix(v01){ reverbWet.gain.value = clamp01(v01); }
 function setMasterVol(v01){ masterGain.gain.value = clamp01(v01); }
 
 /* =========================================================
-   2) Smooth Vertical Slider Engine
+   2) Smooth Vertical Slider
 ========================================================= */
 function createSmoothVSlider({ sliderEl, tooltipEl, wrapEl, maxValue, uiSmooth = 0.22, onValue }){
   let targetP = Number(sliderEl.value) / maxValue;
@@ -965,7 +995,7 @@ function createSmoothVSlider({ sliderEl, tooltipEl, wrapEl, maxValue, uiSmooth =
   requestAnimationFrame(tick);
 }
 
-/* ✅ LEAN: steuert Pitch + MP4 Scrub gleichzeitig */
+/* ✅ LEAN: Pitch + MP4 scrub */
 createSmoothVSlider({
   sliderEl: document.getElementById("sliderLean"),
   tooltipEl: document.getElementById("tipLean"),
@@ -973,14 +1003,12 @@ createSmoothVSlider({
   maxValue: 648,
   uiSmooth: 0.22,
   onValue: (p) => {
-    // Audio pitch/tempo
     setPitchLive(pToPitch(p));
-    // Video scrub
     scrubVideoTo(p);
   }
 });
 
-/* FLANGER: mix */
+/* FLANGER */
 createSmoothVSlider({
   sliderEl: document.getElementById("sliderFlanger"),
   tooltipEl: document.getElementById("tipFlanger"),
@@ -1069,7 +1097,7 @@ createSmoothVSlider({
 })();
 
 /* =========================================================
-   3) Player / Playlist
+   3) Player / Playlist (wie vorher, unverändert)
 ========================================================= */
 const filePick = document.getElementById("filePick");
 const btnAdd = document.getElementById("btnAdd");
@@ -1078,7 +1106,6 @@ const btnPrev = document.getElementById("btnPrev");
 const btnNext = document.getElementById("btnNext");
 const btnClear = document.getElementById("btnClear");
 const vol = document.getElementById("vol");
-
 const playlistEl = document.getElementById("playlist");
 const nowPlayingEl = document.getElementById("nowPlaying");
 
@@ -1110,7 +1137,6 @@ filePick.addEventListener("change", (e) => {
 
 btnPlay.addEventListener("click", async () => {
   await ensureAudio();
-  // ensure video can show current frame on some browsers
   try{ video.pause(); }catch{}
 
   if(current === -1 && tracks.length) await loadTrack(0, false);
@@ -1420,7 +1446,6 @@ async function buildWaveformFromFile(file){
   }
 }
 
-/* draw loop */
 function rafWave(){
   if(__waveAmps && audioBuffer && audioBuffer.duration){
     const p = getCurrentTime() / audioBuffer.duration;
@@ -1433,7 +1458,6 @@ function rafWave(){
 }
 requestAnimationFrame(rafWave);
 
-/* click-to-seek relative to center */
 waveCanvas.addEventListener("pointerdown", async (e) => {
   if(!audioBuffer || !__waveAmps) return;
   await ensureAudio();
@@ -1449,7 +1473,6 @@ window.addEventListener("resize", () => {
   }
 }, { passive:true });
 
-/* Keyboard shortcuts */
 window.addEventListener("keydown", (e) => {
   if(e.target && ["INPUT","TEXTAREA"].includes(e.target.tagName)) return;
   if(e.code === "Space"){
